@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>WFC Live Map</title>
+<script src="/config.js"></script>
+<style>
+:root {
+  --bg:      #0a0e1a;
+  --surface: #111827;
+  --card:    #1a2235;
+  --border:  #243050;
+  --accent:  #3b82f6;
+  --cyan:    #06b6d4;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger:  #ef4444;
+  --text:    #e2e8f0;
+  --muted:   #64748b;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 12px; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+/* ── Header ── */
+#header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 8px 16px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+#header h1 { font-size: 14px; font-weight: 700; color: var(--cyan); letter-spacing: 1px; }
+.hstat { font-size: 11px; color: var(--muted); }
+.hstat b { color: var(--text); }
+#conn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); margin-left: auto; }
+#conn-dot.ok { background: var(--success); }
+
+/* ── Body layout ── */
+#body { display: flex; flex: 1; overflow: hidden; }
+
+/* ── Controls sidebar ── */
+#sidebar { width: 240px; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; flex-shrink: 0; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.s-title { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+.toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; }
+.toggle-label { font-size: 11px; display: flex; align-items: center; gap: 5px; }
+input[type=checkbox] { accent-color: var(--accent); }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.s-input { width: 100%; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 4px; font-size: 11px; }
+.btn { padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600; }
+.btn-sm { padding: 3px 8px; font-size: 10px; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-danger  { background: var(--danger);  color: #fff; }
+.btn-muted   { background: var(--border);  color: var(--text); }
+
+/* ── Map canvas area ── */
+#map-wrap { flex: 1; position: relative; overflow: hidden; cursor: grab; }
+#map-wrap.dragging { cursor: grabbing; }
+canvas#map { position: absolute; top: 0; left: 0; }
+
+/* ── Tooltip ── */
+#tooltip { position: fixed; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-size: 11px; pointer-events: none; display: none; z-index: 100; max-width: 220px; line-height: 1.6; }
+#tooltip .tt-id { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+#tooltip .tt-row { display: flex; justify-content: space-between; gap: 16px; color: var(--muted); }
+#tooltip .tt-row span:last-child { color: var(--text); }
+
+/* ── Legend ── */
+#legend { position: absolute; bottom: 12px; left: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-size: 11px; }
+#legend .lg-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+#legend .lg-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+#legend .lg-sq  { width: 12px; height: 12px; flex-shrink: 0; }
+
+/* ── Coord display ── */
+#coord-display { position: absolute; bottom: 12px; right: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; font-family: monospace; font-size: 12px; color: var(--cyan); }
+
+/* ── Node list ── */
+.nlist-item { padding: 5px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+.nlist-item:hover { color: var(--accent); }
+.nlist-item .nli-id { font-weight: 700; }
+.nlist-item .nli-meta { font-size: 10px; color: var(--muted); }
+.badge { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 9px; font-weight: 700; }
+.ONLINE  { background: #052e16; color: #22c55e; }
+.OFFLINE { background: #450a0a; color: #ef4444; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>🗺 WFC LIVE MAP</h1>
+  <div class="hstat">Nodes: <b id="hd-nodes">0</b></div>
+  <div class="hstat">Drones: <b id="hd-drones">0</b></div>
+  <div class="hstat">Fires: <b id="hd-fires">0</b></div>
+  <div class="hstat">Leaders: <b id="hd-leaders">0</b></div>
+  <span id="conn-dot" title="SSE connection"></span>
+</div>
+
+<div id="body">
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div>
+      <div class="s-title">Display</div>
+      <div class="toggle-row"><label class="toggle-label"><input type="checkbox" id="tog-grid" checked> Grid</label></div>
+      <div class="toggle-row"><label class="toggle-label"><input type="checkbox" id="tog-coords" checked> Coordinates</label></div>
+      <div class="toggle-row"><label class="toggle-label"><input type="checkbox" id="tog-labels" checked> Labels</label></div>
+      <div class="toggle-row"><label class="toggle-label"><input type="checkbox" id="tog-trails" checked> Trails</label></div>
+      <div class="toggle-row"><label class="toggle-label"><input type="checkbox" id="tog-fire-aura" checked> Fire Aura</label></div>
+      <div class="toggle-row"><label class="toggle-label"><input type="checkbox" id="tog-comm-range"> Comm Range</label></div>
+    </div>
+    <div>
+      <div class="s-title">Zoom</div>
+      <input type="range" id="zoom-slider" min="5" max="60" value="25">
+      <div style="text-align:center;font-size:10px;color:var(--muted)" id="zoom-label">25 px/unit</div>
+    </div>
+    <div>
+      <div class="s-title" style="margin-bottom:6px">Filter Nodes</div>
+      <div class="toggle-row"><label class="toggle-label"><input type="checkbox" id="tog-leaders" checked> Leaders</label></div>
+      <div class="toggle-row"><label class="toggle-label"><input type="checkbox" id="tog-scouts" checked> Scouts</label></div>
+      <div class="toggle-row"><label class="toggle-label"><input type="checkbox" id="tog-fighters" checked> Fighters</label></div>
+      <div class="toggle-row"><label class="toggle-label"><input type="checkbox" id="tog-commanders" checked> Commanders</label></div>
+    </div>
+    <div>
+      <div class="s-title" style="margin-bottom:6px">Pan To</div>
+      <div style="display:flex;gap:4px">
+        <input class="s-input" id="pan-x" placeholder="Lat °N" style="width:60px"/>
+        <input class="s-input" id="pan-y" placeholder="Lon °E" style="width:60px"/>
+        <button class="btn btn-sm btn-primary" onclick="panTo()">Go</button>
+      </div>
+      <button class="btn btn-sm btn-muted" style="margin-top:6px;width:100%" onclick="resetView()">⌂ Reset View</button>
+    </div>
+    <div>
+      <div class="s-title" style="margin-bottom:6px">Nodes</div>
+      <div id="node-list" style="max-height:200px;overflow-y:auto"></div>
+    </div>
+  </div>
+
+  <!-- Canvas -->
+  <div id="map-wrap">
+    <canvas id="map"></canvas>
+    <div id="legend">
+      <div class="lg-row"><div class="lg-dot" style="background:#f59e0b"></div> Leader</div>
+      <div class="lg-row"><div class="lg-dot" style="background:#06b6d4"></div> Scout Drone</div>
+      <div class="lg-row"><div class="lg-dot" style="background:#ef4444"></div> Fighter Drone</div>
+      <div class="lg-row"><div class="lg-dot" style="background:#a78bfa"></div> Commander</div>
+      <div class="lg-row"><div class="lg-sq"  style="background:#dc2626;opacity:.4;border-radius:2px"></div> Fire Zone</div>
+    </div>
+    <div id="coord-display">X: — &nbsp; Y: —</div>
+  </div>
+</div>
+
+<div id="tooltip">
+  <div class="tt-id" id="tt-id"></div>
+  <div id="tt-body"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// WFC Live Map — V2.0
+// ══════════════════════════════════════════════════════════════
+
+const canvas = document.getElementById('map');
+const ctx    = canvas.getContext('2d');
+const wrap   = document.getElementById('map-wrap');
+
+// ── State ──────────────────────────────────────────────────────
+let nodes = [], fires = [], trails = {};
+let originLat  = 36.8065;   // °N
+let originLon  = 10.1815;   // °E
+let pxPerDeg   = 80000;
+let isDragging = false, dragStart = {x:0, y:0};
+let hoveredNode = null;
+let firstFit    = true;
+
+function latLonToCanvas(lat, lon) {
+  const dlat = lat - originLat;
+  const dlon = lon - originLon;
+  const cosLat = Math.cos(originLat * Math.PI / 180);
+  const px = canvas.width  / 2 + dlon * pxPerDeg * cosLat;
+  const py = canvas.height / 2 - dlat * pxPerDeg;
+  return [px, py];
+}
+
+function canvasToLatLon(px, py) {
+  const cosLat = Math.cos(originLat * Math.PI / 180);
+  const dlon = (px - canvas.width  / 2) / (pxPerDeg * cosLat);
+  const dlat = -(py - canvas.height / 2) / pxPerDeg;
+  return [originLat + dlat, originLon + dlon];
+}
+
+// ── Init ────────────────────────────────────────────────────────
+function resize() { canvas.width = wrap.clientWidth; canvas.height = wrap.clientHeight; draw(); }
+resize();
+window.addEventListener('resize', resize);
+
+// ── SSE ─────────────────────────────────────────────────────────
+const es = new EventSource('/api/stream');
+es.onopen  = () => document.getElementById('conn-dot').classList.add('ok');
+es.onerror = () => document.getElementById('conn-dot').classList.remove('ok');
+es.onmessage = e => {
+  const d = JSON.parse(e.data);
+  nodes = d.nodes || [];
+  fires = d.fires || [];
+
+  if (firstFit && nodes.some(n => n.location)) {
+    fitToNodes();
+    firstFit = false;
+  }
+
+  // Record trails
+  nodes.forEach(n => {
+    if (!n.location) return;
+    const [lat, lon] = n.location;
+    if (!trails[n.node_id]) trails[n.node_id] = [];
+    const tr   = trails[n.node_id];
+    const last = tr[tr.length - 1];
+    if (!last || Math.abs(last[0]-lat) > 0.0001 || Math.abs(last[1]-lon) > 0.0001) {
+      tr.push([lat, lon]);
+      if (tr.length > 80) tr.shift();
+    }
+  });
+
+  document.getElementById('hd-nodes').textContent   = nodes.length;
+  document.getElementById('hd-drones').textContent  = nodes.filter(n=>n.node_type?.includes('DRONE')).length;
+  document.getElementById('hd-fires').textContent   = fires.length;
+  document.getElementById('hd-leaders').textContent = nodes.filter(n=>n.node_type==='SWARM_LEADER').length;
+
+  updateNodeList();
+  draw();
+};
+
+function fitToNodes() {
+  const locs = nodes.filter(n => n.location).map(n => n.location);
+  if (!locs.length) return;
+  const lats = locs.map(l => l[0]);
+  const lons = locs.map(l => l[1]);
+  originLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+  originLon = (Math.min(...lons) + Math.max(...lons)) / 2;
+  const spanLat = Math.max(0.002, Math.max(...lats) - Math.min(...lats));
+  const spanLon = Math.max(0.002, Math.max(...lons) - Math.min(...lons));
+  const cosLat  = Math.cos(originLat * Math.PI / 180);
+  const fitLat  = (canvas.height * 0.7) / spanLat;
+  const fitLon  = (canvas.width  * 0.7) / (spanLon * cosLat);
+  pxPerDeg = Math.min(fitLat, fitLon);
+  document.getElementById('zoom-slider').value = Math.round(Math.log2(pxPerDeg / 1000));
+  updateZoomLabel();
+}
+
+// ── Draw ─────────────────────────────────────────────────────────
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const showGrid    = document.getElementById('tog-grid').checked;
+  const showCoords  = document.getElementById('tog-coords').checked;
+  const showLabels  = document.getElementById('tog-labels').checked;
+  const showTrails  = document.getElementById('tog-trails').checked;
+  const showAura    = document.getElementById('tog-fire-aura').checked;
+  const showRange   = document.getElementById('tog-comm-range').checked;
+  const showLeaders = document.getElementById('tog-leaders').checked;
+  const showScouts  = document.getElementById('tog-scouts').checked;
+  const showFighters= document.getElementById('tog-fighters').checked;
+  const showCmds    = document.getElementById('tog-commanders').checked;
+
+  // Grid
+  if (showGrid) {
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 1;
+    const gridStep = choosGridStep();
+    const [minLat, minLon] = canvasToLatLon(0, canvas.height);
+    const [maxLat, maxLon] = canvasToLatLon(canvas.width, 0);
+    for (let lat = Math.floor(minLat/gridStep)*gridStep; lat <= maxLat; lat+=gridStep) {
+      const [,py] = latLonToCanvas(lat, originLon);
+      ctx.beginPath(); ctx.moveTo(0,py); ctx.lineTo(canvas.width,py); ctx.stroke();
+      if (showCoords) {
+        ctx.fillStyle='#334155'; ctx.font='9px monospace';
+        ctx.fillText(lat.toFixed(4)+'°N', 4, py-2);
+      }
+    }
+    for (let lon = Math.floor(minLon/gridStep)*gridStep; lon <= maxLon; lon+=gridStep) {
+      const [px,] = latLonToCanvas(originLat, lon);
+      ctx.beginPath(); ctx.moveTo(px,0); ctx.lineTo(px,canvas.height); ctx.stroke();
+      if (showCoords) {
+        ctx.fillStyle='#334155'; ctx.font='9px monospace';
+        ctx.fillText(lon.toFixed(4)+'°E', px+2, canvas.height-4);
+      }
+    }
+  }
+
+  // Fire zones
+  if (showAura) {
+    fires.forEach(f => {
+      if (!f.location_coords) return;
+      const [lat, lon] = f.location_coords;
+      const [cx, cy] = latLonToCanvas(lat, lon);
+      const r_m  = f.perimeter_m ? f.perimeter_m / (2 * Math.PI) : 40;
+      const r_px = metresToPx(r_m);
+      const col  = f.fire_intensity === 'CRITICAL' ? '#dc2626' :
+                   f.fire_intensity === 'HIGH'     ? '#ea580c' :
+                   f.fire_intensity === 'MEDIUM'   ? '#f59e0b' : '#fde68a';
+      ctx.beginPath(); ctx.arc(cx, cy, Math.max(8, r_px), 0, 2*Math.PI);
+      ctx.fillStyle = col + '30'; ctx.fill();
+      ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.stroke();
+      if (showLabels) {
+        ctx.fillStyle = col; ctx.font = 'bold 11px monospace';
+        ctx.fillText(`🔥 ${f.fire_id}`, cx+Math.max(8,r_px)+4, cy);
+        if (f.perimeter_m) ctx.fillText(`⌀${f.perimeter_m.toFixed(0)}m`, cx+Math.max(8,r_px)+4, cy+13);
+      }
+    });
+  }
+
+  // Comm range
+  if (showRange) {
+    nodes.filter(n=>n.location && n.node_type?.includes('DRONE')).forEach(n => {
+      const [cx,cy] = latLonToCanvas(n.location[0], n.location[1]);
+      const r_px = metresToPx(1000);
+      ctx.beginPath(); ctx.arc(cx,cy,r_px,0,2*Math.PI);
+      ctx.strokeStyle='#1e40af40'; ctx.lineWidth=1; ctx.stroke();
+    });
+  }
+
+  // Trails
+  if (showTrails) {
+    Object.entries(trails).forEach(([id, pts]) => {
+      if (pts.length < 2) return;
+      const n = nodes.find(x=>x.node_id===id);
+      const col = n?.node_type==='SCOUT_DRONE' ? '#0891b2' :
+                  n?.node_type==='FIREFIGHTING_DRONE' ? '#dc2626' : '#64748b';
+      ctx.strokeStyle = col+'60'; ctx.lineWidth = 1.5; ctx.setLineDash([3,3]);
+      ctx.beginPath();
+      pts.forEach((p,i) => {
+        const [px,py] = latLonToCanvas(p[0],p[1]);
+        i===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+      });
+      ctx.stroke(); ctx.setLineDash([]);
+    });
+  }
+
+  // Nodes
+  nodes.forEach(n => {
+    if (!n.location) return;
+    const type = n.node_type;
+    if (type==='SWARM_LEADER'      && !showLeaders)  return;
+    if (type==='SCOUT_DRONE'       && !showScouts)   return;
+    if (type==='FIREFIGHTING_DRONE'&& !showFighters) return;
+    if (type?.includes('COMMANDER')&& !showCmds)     return;
+
+    const [lat,lon] = n.location;
+    const [cx,cy]   = latLonToCanvas(lat, lon);
+    const age  = (Date.now()/1000) - (n.last_seen||0);
+    const stale= age > 15;
+    const r    = type?.includes('DRONE') ? 7 : 9;
+
+    const col = type==='SWARM_LEADER'       ? '#f59e0b' :
+                type==='SCOUT_DRONE'        ? '#06b6d4' :
+                type==='FIREFIGHTING_DRONE' ? '#ef4444' :
+                type?.includes('COMMANDER') ? '#a78bfa' : '#64748b';
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,2*Math.PI);
+    ctx.fillStyle = stale ? col+'60' : col;
+    ctx.fill();
+    if (n.pump_active) {
+      ctx.beginPath(); ctx.arc(cx,cy,r+4,0,2*Math.PI);
+      ctx.strokeStyle='#fde047'; ctx.lineWidth=2; ctx.stroke();
+    }
+    if (stale) {
+      ctx.beginPath(); ctx.arc(cx,cy,r+3,0,2*Math.PI);
+      ctx.strokeStyle='#64748b80'; ctx.lineWidth=1.5; ctx.stroke();
+    }
+
+    if (type?.includes('DRONE') && n.battery_pct != null) {
+      const bp   = n.battery_pct;
+      const bw   = 20; const bh = 3;
+      const bx   = cx - bw/2; const by = cy + r + 3;
+      const bcol = bp>0.6?'#22c55e':bp>0.3?'#f59e0b':'#ef4444';
+      ctx.fillStyle='#1e293b'; ctx.fillRect(bx,by,bw,bh);
+      ctx.fillStyle=bcol;      ctx.fillRect(bx,by,bw*bp,bh);
+    }
+
+    if (showLabels) {
+      ctx.fillStyle = stale?'#475569':'#e2e8f0';
+      ctx.font = type?.includes('DRONE') ? '10px monospace' : 'bold 11px monospace';
+      ctx.fillText(n.node_id, cx+r+3, cy+4);
+      if (showCoords) {
+        ctx.fillStyle='#64748b'; ctx.font='9px monospace';
+        ctx.fillText(`${lat.toFixed(4)}°N`, cx+r+3, cy+15);
+        ctx.fillText(`${lon.toFixed(4)}°E`, cx+r+3, cy+25);
+      }
+      if (n.altitude_m_amsl != null) {
+        ctx.fillStyle='#94a3b8'; ctx.font='9px monospace';
+        ctx.fillText(`${n.altitude_m_amsl.toFixed(0)}m`, cx-r-28, cy+4);
+      }
+    }
+  });
+}
+
+function choosGridStep() {
+  if (pxPerDeg > 500000) return 0.0001;
+  if (pxPerDeg > 100000) return 0.001;
+  if (pxPerDeg > 20000)  return 0.005;
+  if (pxPerDeg > 5000)   return 0.01;
+  return 0.1;
+}
+
+function metresToPx(m) {
+  const degPerM = 1 / 111320;
+  return m * degPerM * pxPerDeg;
+}
+
+// ── Pan & zoom ────────────────────────────────────────────────────
+canvas.addEventListener('mousedown', e => {
+  isDragging = true; dragStart = {x:e.clientX, y:e.clientY};
+  wrap.classList.add('dragging');
+});
+canvas.addEventListener('mousemove', e => {
+  if (isDragging) {
+    const dx = e.clientX - dragStart.x;
+    const dy = e.clientY - dragStart.y;
+    dragStart = {x:e.clientX, y:e.clientY};
+    const cosLat = Math.cos(originLat * Math.PI/180);
+    originLon -= dx / (pxPerDeg * cosLat);
+    originLat += dy / pxPerDeg;
+    draw();
+  }
+  const [lat,lon] = canvasToLatLon(e.offsetX, e.offsetY);
+  document.getElementById('coord-display').textContent =
+    `${lat.toFixed(5)}°N  ${lon.toFixed(5)}°E`;
+  const hit = nodes.find(n => {
+    if (!n.location) return false;
+    const [cx,cy] = latLonToCanvas(n.location[0], n.location[1]);
+    return Math.sqrt((e.offsetX-cx)**2+(e.offsetY-cy)**2) < 12;
+  });
+  if (hit !== hoveredNode) { hoveredNode = hit; draw(); }
+  showTooltip(hoveredNode, e.clientX, e.clientY);
+});
+canvas.addEventListener('mouseup',    () => { isDragging=false; wrap.classList.remove('dragging'); });
+canvas.addEventListener('mouseleave', () => { isDragging=false; wrap.classList.remove('dragging'); showTooltip(null,0,0); });
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.15 : 0.87;
+  const [lat,lon] = canvasToLatLon(e.offsetX, e.offsetY);
+  pxPerDeg *= factor;
+  pxPerDeg  = Math.max(5000, Math.min(2000000, pxPerDeg));
+  const [nx,ny] = latLonToCanvas(lat, lon);
+  const cosLat  = Math.cos(originLat * Math.PI/180);
+  originLon += (e.offsetX - nx) / (pxPerDeg * cosLat);
+  originLat -= (e.offsetY - ny) / pxPerDeg;
+  document.getElementById('zoom-slider').value = Math.round(Math.log2(pxPerDeg/1000));
+  updateZoomLabel();
+  draw();
+}, {passive:false});
+
+document.getElementById('zoom-slider').addEventListener('input', e => {
+  pxPerDeg = 1000 * Math.pow(2, parseInt(e.target.value));
+  updateZoomLabel(); draw();
+});
+function updateZoomLabel() {
+  const mPerPx = 111320 / pxPerDeg;
+  const lbl = mPerPx < 1 ? `${(mPerPx*100).toFixed(0)} cm/px` :
+              mPerPx < 1000 ? `${mPerPx.toFixed(0)} m/px` :
+              `${(mPerPx/1000).toFixed(1)} km/px`;
+  document.getElementById('zoom-label').textContent = lbl;
+}
+updateZoomLabel();
+
+// ── Tooltip ───────────────────────────────────────────────────────
+function showTooltip(node, mx, my) {
+  const tt = document.getElementById('tooltip');
+  if (!node) { tt.style.display='none'; return; }
+  document.getElementById('tt-id').textContent = node.node_id;
+  const rows = [
+    ['Type',    node.node_type?.replace(/_/g,' ')],
+    ['Status',  node.status],
+    ['Zone',    node.zone || '—'],
+    node.location ? ['GPS', `${node.location[0].toFixed(5)}°N, ${node.location[1].toFixed(5)}°E`] : null,
+    node.altitude_m_amsl != null ? ['Altitude', `${node.altitude_m_amsl.toFixed(0)} m AMSL`] : null,
+    node.task           ? ['Task',         node.task] : null,
+    node.battery_wh  != null ? ['Battery', `${node.battery_wh.toFixed(1)} Wh (${Math.round(node.battery_pct*100)}%)`] : null,
+    node.payload_litres != null ? ['Payload', `${node.payload_litres.toFixed(2)} L (${node.payload_kg?.toFixed(2)} kg)`] : null,
+    node.connectivity   ? ['Connectivity', node.connectivity] : null,
+    node.thermal_peak_temp_c    != null ? ['Thermal Peak',  `${node.thermal_peak_temp_c.toFixed(1)} °C`] : null,
+    node.thermal_coverage_pct   != null ? ['Thermal Cover', `${Math.round(node.thermal_coverage_pct*100)} %`] : null,
+    node.smoke_density_mg_m3    != null ? ['Smoke',         `${node.smoke_density_mg_m3.toFixed(0)} mg/m³`] : null,
+    node.flame_height_m         != null ? ['Flame Height',  `${node.flame_height_m.toFixed(1)} m`] : null,
+    node.wind_speed_mps         != null ? ['Wind',          `${node.wind_speed_mps.toFixed(1)} m/s · ${node.wind_direction_deg?.toFixed(0)||'—'}°T`] : null,
+    node.distance_to_flame_m    != null ? ['Range to Flame',`${node.distance_to_flame_m.toFixed(1)} m`] : null,
+    node.perimeter_estimate_m   != null ? ['Perimeter Est.',`${node.perimeter_estimate_m.toFixed(0)} m`] : null,
+    node.litres_delivered             != null ? ['Delivered',       `${node.litres_delivered.toFixed(2)} L`] : null,
+    node.suppression_effectiveness_pct!= null ? ['Effectiveness',   `${Math.round(node.suppression_effectiveness_pct*100)} %`] : null,
+    node.drop_passes                  != null ? ['Drop Passes',     node.drop_passes] : null,
+    node.pump_active                  != null ? ['Pump',            node.pump_active ? '● ACTIVE' : 'OFF'] : null,
+    node.fire_intensity   ? ['Fire Intensity', node.fire_intensity] : null,
+    node.swarm_status     ? ['Swarm Status',   node.swarm_status]   : null,
+    node.active_drones != null ? ['Active Drones', node.active_drones] : null,
+    node.avg_payload_litres != null ? ['Avg Payload', `${node.avg_payload_litres.toFixed(1)} L`] : null,
+    node.total_litres_delivered != null ? ['Total Delivered', `${node.total_litres_delivered.toFixed(1)} L`] : null,
+    node.wind_speed_mps_snap != null ? ['Zone Wind', `${node.wind_speed_mps_snap.toFixed(1)} m/s`] : null,
+  ].filter(Boolean);
+  document.getElementById('tt-body').innerHTML = rows.map(([k,v]) =>
+    `<div class="tt-row"><span>${k}</span><span>${v}</span></div>`).join('');
+  const pad=12;
+  let tx=mx+pad, ty=my-pad;
+  if (tx+240>window.innerWidth) tx=mx-240-pad;
+  tt.style.left=tx+'px'; tt.style.top=ty+'px'; tt.style.display='block';
+}
+
+// ── Focus / pan ───────────────────────────────────────────────────
+function focusNode(nodeId) {
+  const n = nodes.find(x => x.node_id===nodeId);
+  if (!n?.location) return;
+  originLat = n.location[0];
+  originLon = n.location[1];
+  draw();
+}
+
+function resetView() { firstFit=true; fitToNodes(); draw(); }
+
+function panTo() {
+  const lat = parseFloat(document.getElementById('pan-x').value);
+  const lon = parseFloat(document.getElementById('pan-y').value);
+  if (isNaN(lat)||isNaN(lon)) return;
+  originLat=lat; originLon=lon; draw();
+}
+
+// ── Node list ─────────────────────────────────────────────────────
+function updateNodeList() {
+  document.getElementById('node-list').innerHTML = nodes.map(n => `
+    <div class="nlist-item" onclick="focusNode('${n.node_id}')">
+      <div class="nli-id">${n.node_id}
+        <span class="badge ${n.status==='ONLINE'?'ONLINE':'OFFLINE'}">${n.status}</span>
+      </div>
+      <div class="nli-meta">${n.node_type?.replace(/_/g,' ')}
+        ${n.location ? ` · ${n.location[0].toFixed(4)}°N` : ''}
+      </div>
+      ${n.battery_wh!=null ? `<div class="nli-meta">${n.battery_wh.toFixed(0)} Wh · ${n.task||'IDLE'}</div>` : ''}
+    </div>`).join('');
+}
+
+// ── Toggle redraws ────────────────────────────────────────────────
+['tog-grid','tog-coords','tog-labels','tog-trails','tog-fire-aura','tog-comm-range',
+ 'tog-leaders','tog-scouts','tog-fighters','tog-commanders'].forEach(id => {
+  document.getElementById(id).addEventListener('change', draw);
+});
+</script>
+</body>
+</html>

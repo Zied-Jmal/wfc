@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>WFC Control Dashboard</title>
+<script src="/config.js"></script>
+<style>
+:root {
+  --bg:       #0a0e1a;
+  --surface:  #111827;
+  --card:     #1a2235;
+  --border:   #243050;
+  --accent:   #3b82f6;
+  --accent2:  #06b6d4;
+  --success:  #22c55e;
+  --warning:  #f59e0b;
+  --danger:   #ef4444;
+  --critical: #dc2626;
+  --text:     #e2e8f0;
+  --muted:    #64748b;
+  --nav-w:    220px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 13px; display: flex; height: 100vh; overflow: hidden; }
+
+/* ── Nav sidebar ── */
+#nav { width: var(--nav-w); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+#nav h1 { padding: 20px 16px 12px; font-size: 14px; font-weight: 700; color: var(--accent2); letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+#nav .subtitle { padding: 6px 16px 14px; font-size: 10px; color: var(--muted); }
+.nav-item { padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: var(--muted); transition: all .15s; border-left: 3px solid transparent; }
+.nav-item:hover { background: var(--card); color: var(--text); }
+.nav-item.active { background: var(--card); color: var(--accent); border-left-color: var(--accent); }
+.nav-icon { font-size: 15px; width: 18px; text-align: center; }
+.nav-section { padding: 10px 16px 4px; font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 8px; }
+#broker-dot { margin-left: auto; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
+#broker-dot.ok { background: var(--success); }
+#open-map { margin: auto 16px 16px; padding: 8px 12px; background: var(--accent); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; text-align: center; }
+#open-map:hover { background: #2563eb; }
+
+/* ── Main content ── */
+#content { flex: 1; overflow-y: auto; padding: 20px; }
+.page { display: none; }
+.page.active { display: block; }
+.page-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; color: var(--text); }
+
+/* ── Cards ── */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+.card-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+
+/* ── Grid ── */
+.grid { display: grid; gap: 12px; }
+.grid-2 { grid-template-columns: 1fr 1fr; }
+.grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.grid-4 { grid-template-columns: repeat(4,1fr); }
+
+/* ── Stat box ── */
+.stat { text-align: center; }
+.stat .val { font-size: 24px; font-weight: 700; color: var(--accent2); }
+.stat .lbl { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+/* ── Node cards ── */
+.node-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; position: relative; }
+.node-card .nt { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.node-card .nid { font-size: 13px; font-weight: 700; margin: 2px 0 6px; }
+.node-card .nbadge { position: absolute; top: 10px; right: 10px; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+.node-card .nrow { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 3px; }
+.node-card .nrow span:last-child { color: var(--text); }
+.node-card .nzone { font-size: 10px; color: var(--accent); margin-top: 4px; }
+.node-card .nloc { font-size: 10px; color: var(--accent2); font-family: monospace; }
+.ONLINE  { background: #052e16; color: var(--success); }
+.OFFLINE { background: #450a0a; color: var(--danger); }
+.bar-wrap { background: #1e293b; border-radius: 4px; height: 5px; margin-top: 5px; }
+.bar { height: 5px; border-radius: 4px; background: var(--accent); transition: width .4s; }
+
+/* ── Command panels ── */
+.cmd-panel { display: flex; flex-direction: column; gap: 8px; }
+.cmd-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 3px; }
+input, select, textarea { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 5px; font-size: 12px; width: 100%; }
+input:focus, select:focus { outline: none; border-color: var(--accent); }
+.btn { padding: 7px 14px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; transition: opacity .15s; white-space: nowrap; }
+.btn:hover { opacity: .85; }
+.btn-primary { background: var(--accent);   color: #fff; }
+.btn-success { background: var(--success);  color: #fff; }
+.btn-warning { background: var(--warning);  color: #000; }
+.btn-danger  { background: var(--danger);   color: #fff; }
+.btn-cyan    { background: var(--accent2);  color: #000; }
+.btn-muted   { background: var(--border);   color: var(--text); }
+.btn-sm { padding: 4px 9px; font-size: 11px; }
+
+/* ── Event log ── */
+#event-log { list-style: none; max-height: 360px; overflow-y: auto; }
+#event-log li { padding: 5px 8px; border-bottom: 1px solid var(--border); font-size: 11px; display: flex; gap: 8px; }
+#event-log li .ev-ts { color: var(--muted); font-family: monospace; flex-shrink: 0; }
+.ev-ANNOUNCE   { color: #38bdf8; }
+.ev-ELECTION   { color: #a78bfa; }
+.ev-FIRE_INTENSITY, .ev-FIRE_VERIFIED, .ev-FIRE_REKINDLED { color: var(--warning); }
+.ev-CMD_SENT   { color: var(--success); }
+.ev-ACK        { color: var(--muted); }
+.ev-FAILOVER   { color: var(--danger); }
+.ev-APPROVAL_PENDING { color: var(--critical); font-weight: 700; }
+
+/* ── Badge utils ── */
+.badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+.badge-LOW      { background: #052e16; color: var(--success); }
+.badge-MEDIUM   { background: #451a03; color: var(--warning); }
+.badge-HIGH     { background: #3f1614; color: #f87171; }
+.badge-CRITICAL { background: #450a0a; color: #fca5a5; animation: pulse .8s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ── Table ── */
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { text-align: left; padding: 7px 10px; background: var(--surface); color: var(--muted); font-size: 10px; text-transform: uppercase; }
+td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+tr:hover td { background: var(--surface); }
+
+/* ── Toast ── */
+#toast { position: fixed; bottom: 20px; right: 20px; z-index: 999; display: flex; flex-direction: column; gap: 6px; }
+.toast-msg { background: var(--card); border: 1px solid var(--border); padding: 10px 16px; border-radius: 6px; font-size: 12px; animation: slideIn .2s; }
+.toast-ok   { border-left: 3px solid var(--success); }
+.toast-err  { border-left: 3px solid var(--danger); }
+@keyframes slideIn { from { transform: translateX(40px); opacity:0 } to { transform: none; opacity:1 } }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ SIDEBAR ══════════════ -->
+<nav id="nav">
+  <h1>WFC Control</h1>
+  <div class="subtitle">Wildfire Commander Dashboard</div>
+
+  <div class="nav-section">Overview</div>
+  <div class="nav-item active" data-page="overview">
+    <span class="nav-icon">📊</span> Overview
+    <span id="broker-dot" title="MQTT broker"></span>
+  </div>
+
+  <div class="nav-section">Control</div>
+  <div class="nav-item" data-page="fire-ops">
+    <span class="nav-icon">🔥</span> Fire Ops
+  </div>
+  <div class="nav-item" data-page="drone-control">
+    <span class="nav-icon">🚁</span> Drones
+  </div>
+  <div class="nav-item" data-page="leaders">
+    <span class="nav-icon">👑</span> Leaders
+  </div>
+  <div class="nav-item" data-page="commanders">
+    <span class="nav-icon">🖥</span> Commanders
+  </div>
+
+  <div class="nav-section">Monitor</div>
+  <div class="nav-item" data-page="nodes">
+    <span class="nav-icon">📡</span> All Nodes
+  </div>
+  <div class="nav-item" data-page="elections">
+    <span class="nav-icon">🗳</span> Elections
+  </div>
+  <div class="nav-item" data-page="approvals">
+    <span class="nav-icon">✅</span> Approvals
+  </div>
+  <div class="nav-item" data-page="events">
+    <span class="nav-icon">📋</span> Event Log
+  </div>
+
+  <div class="nav-section">Inject / Test</div>
+  <div class="nav-item" data-page="inject">
+    <span class="nav-icon">⚡</span> Inject Events
+  </div>
+
+  <button id="open-map">🗺 Open Live Map</button>
+</nav>
+
+<!-- ══════════════ CONTENT ══════════════ -->
+<main id="content">
+
+<!-- PAGE: Overview -->
+<section class="page active" id="page-overview">
+  <div class="page-title">📊 System Overview</div>
+  <div class="grid grid-4" style="margin-bottom:12px">
+    <div class="card"><div class="stat"><div class="val" id="ov-total">—</div><div class="lbl">Total Nodes</div></div></div>
+    <div class="card"><div class="stat"><div class="val" id="ov-online" style="color:var(--success)">—</div><div class="lbl">Online</div></div></div>
+    <div class="card"><div class="stat"><div class="val" id="ov-fires" style="color:var(--warning)">—</div><div class="lbl">Active Fires</div></div></div>
+    <div class="card"><div class="stat"><div class="val" id="ov-drones">—</div><div class="lbl">Drones</div></div></div>
+  </div>
+  <div class="grid grid-2">
+    <div>
+      <div class="card">
+        <div class="card-title">Node Roster</div>
+        <div id="ov-nodes" class="grid grid-2"></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title">Active Fires</div>
+        <div id="ov-fires-list"></div>
+      </div>
+      <div class="card" style="margin-top:0">
+        <div class="card-title">Recent Events</div>
+        <ul id="event-log"></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PAGE: Fire Ops -->
+<section class="page" id="page-fire-ops">
+  <div class="page-title">🔥 Fire Operations</div>
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="card-title">Send Fire Command to Leader</div>
+      <div class="cmd-panel">
+        <div><label>Target Leader ID</label><input id="fo-leader" placeholder="sl-A-01"/></div>
+        <div><label>Fire ID (leave blank to auto-generate)</label><input id="fo-fire-id" placeholder="fire-001"/></div>
+        <div><label>Fire Location (WGS-84 lat°N, lon°E)</label>
+          <div class="cmd-row">
+            <input id="fo-lat" placeholder="Lat °N e.g. 36.8165" style="width:80px"/> &nbsp;
+            <input id="fo-lon" placeholder="Lon °E e.g. 10.2015" style="width:80px"/>
+          </div>
+        </div>
+        <div class="cmd-row" style="flex-wrap:wrap; gap:6px; margin-top:4px">
+          <button class="btn btn-warning" onclick="fireCmd('respond')">🔥 Respond to Fire</button>
+          <button class="btn btn-primary" onclick="fireCmd('contain')">🧱 Contain Fire</button>
+          <button class="btn btn-cyan"    onclick="fireCmd('reinforce')">💪 Reinforce</button>
+          <button class="btn btn-muted"   onclick="fireCmd('stand_down')">🏳 Stand Down</button>
+          <button class="btn btn-danger"  onclick="fireCmd('abort')">🛑 Abort Mission</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Active Fires</div>
+      <div id="fo-fires-table"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Leaders — Current Fire Status</div>
+    <div id="fo-leaders-status"></div>
+  </div>
+</section>
+
+<!-- PAGE: Drone Control -->
+<section class="page" id="page-drone-control">
+  <div class="page-title">🚁 Drone Control</div>
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="card-title">Manual Drone Command (Override)</div>
+      <div class="cmd-panel">
+        <div><label>Drone ID</label><input id="dc-drone" placeholder="fd-A-01 or sd-A-01"/></div>
+        <div><label>Command</label>
+          <select id="dc-cmd">
+            <option value="DISPATCH_DRONE">DISPATCH_DRONE</option>
+            <option value="RECALL_DRONE">RECALL_DRONE</option>
+            <option value="UPDATE_TASK">UPDATE_TASK</option>
+          </select>
+        </div>
+        <div><label>Payload JSON (optional)</label>
+          <textarea id="dc-payload" rows="2" placeholder='{"task":"SCOUTING"}'></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="droneCmd()">Send Command</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Drone Telemetry</div>
+      <div id="dc-drones"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">All Drones</div>
+    <div id="dc-drone-table"></div>
+  </div>
+</section>
+
+<!-- PAGE: Leaders -->
+<section class="page" id="page-leaders">
+  <div class="page-title">👑 Swarm Leaders</div>
+  <div class="card">
+    <div class="card-title">Leader Command</div>
+    <div class="cmd-panel">
+      <div class="cmd-row">
+        <div style="flex:1"><label>Leader ID</label><input id="ldr-id" placeholder="sl-A-01"/></div>
+        <div style="flex:1"><label>Command</label>
+          <select id="ldr-cmd">
+            <option value="CONFIRM_LEADERSHIP">CONFIRM_LEADERSHIP</option>
+            <option value="REASSIGN_LEADER">REASSIGN_LEADER</option>
+          </select>
+        </div>
+        <div style="flex:1"><label>Payload JSON</label><input id="ldr-payload" placeholder='{}'/></div>
+        <div style="padding-top:18px"><button class="btn btn-primary" onclick="leaderCmd()">Send</button></div>
+      </div>
+    </div>
+  </div>
+  <div id="ldr-cards" class="grid grid-3"></div>
+</section>
+
+<!-- PAGE: Commanders -->
+<section class="page" id="page-commanders">
+  <div class="page-title">🖥 Commanders</div>
+  <div id="cmd-cards" class="grid grid-2" style="margin-bottom:14px"></div>
+  <div class="card">
+    <div class="card-title">Pending Approvals</div>
+    <div id="apv-list"></div>
+  </div>
+</section>
+
+<!-- PAGE: All Nodes -->
+<section class="page" id="page-nodes">
+  <div class="page-title">📡 All Nodes</div>
+  <div class="card">
+    <table>
+      <thead><tr>
+        <th>Node ID</th><th>Type</th><th>Status</th><th>Zone</th>
+        <th>Location (lat°, lon°)</th><th>Last Seen</th><th>Task / Status</th>
+      </tr></thead>
+      <tbody id="nodes-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- PAGE: Elections -->
+<section class="page" id="page-elections">
+  <div class="page-title">🗳 Leader Elections</div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Time</th><th>Zone</th><th>Winner</th><th>Old Leader</th><th>Term</th></tr></thead>
+      <tbody id="elections-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- PAGE: Approvals -->
+<section class="page" id="page-approvals">
+  <div class="page-title">✅ Command Approvals</div>
+  <div id="approvals-list"></div>
+</section>
+
+<!-- PAGE: Event Log -->
+<section class="page" id="page-events">
+  <div class="page-title">📋 Full Event Log</div>
+  <div class="card">
+    <ul id="full-event-log" style="max-height:600px; overflow-y:auto; list-style:none"></ul>
+  </div>
+</section>
+
+<!-- PAGE: Inject -->
+<!-- PAGE: Inject — V2: two triggers, GPS coords, ISO fields -->
+<section class="page" id="page-inject">
+  <div class="page-title">⚡ Inject / Test Events</div>
+  <div class="grid grid-2">
+
+    <!-- SENSOR TRIGGER — starts a new fire -->
+    <div class="card">
+      <div class="card-title">🔥 Inject Fire — Sensor Trigger <span style="font-size:9px;color:var(--muted)">(wfc/events/fire)</span></div>
+      <div style="font-size:10px;color:var(--accent2);margin-bottom:8px">
+        Simulates a ground sensor detecting a NEW fire.<br>
+        Triggers Commander rule engine → RESPOND_TO_FIRE dispatch.
+      </div>
+      <div class="cmd-panel">
+        <div><label>Fire ID (blank = auto)</label><input id="inj-fire-id" placeholder="fire-test-01"/></div>
+        <div><label>Zone</label><input id="inj-zone" placeholder="zone_alpha" value="zone_alpha"/></div>
+        <div><label>Latitude °N (WGS-84)</label><input id="inj-lat" placeholder="36.8165" value="36.8165"/></div>
+        <div><label>Longitude °E (WGS-84)</label><input id="inj-lon" placeholder="10.2015" value="10.2015"/></div>
+        <div><label>Sensor ID</label><input id="inj-sensor-id" placeholder="sensor-ground-01" value="sensor-ground-01"/></div>
+        <div><label>Severity</label>
+          <select id="inj-severity">
+            <option value="LOW">LOW</option>
+            <option value="MEDIUM" selected>MEDIUM</option>
+            <option value="HIGH">HIGH</option>
+            <option value="CRITICAL">CRITICAL</option>
+          </select>
+        </div>
+        <button class="btn btn-warning" onclick="injectFireSensor()">🔥 Inject Sensor Fire</button>
+      </div>
+    </div>
+
+    <!-- LEADER TRIGGER — escalates existing fire -->
+    <div class="card">
+      <div class="card-title">📈 Inject Fire Intensity Update — Leader Trigger <span style="font-size:9px;color:var(--muted)">(wfc/events/fire/intensity)</span></div>
+      <div style="font-size:10px;color:var(--accent2);margin-bottom:8px">
+        Simulates a leader reporting intensity change on an EXISTING fire.<br>
+        Use for escalation / de-escalation. Does NOT create a new fire.
+      </div>
+      <div class="cmd-panel">
+        <div><label>Fire ID</label><input id="inj-int-fire-id" placeholder="fire-test-01"/></div>
+        <div><label>Leader ID</label><input id="inj-int-leader-id" placeholder="sl-A-01" value="sl-A-01"/></div>
+        <div><label>New Intensity</label>
+          <select id="inj-int-intensity">
+            <option value="LOW">LOW</option>
+            <option value="MEDIUM" selected>MEDIUM</option>
+            <option value="HIGH">HIGH</option>
+            <option value="CRITICAL">CRITICAL</option>
+          </select>
+        </div>
+        <div><label>Perimeter (m)</label><input id="inj-int-perimeter" placeholder="150.0" value="150.0"/></div>
+        <div><label>Spread Rate</label>
+          <select id="inj-int-spread">
+            <option value="SLOW" selected>SLOW</option>
+            <option value="MODERATE">MODERATE</option>
+            <option value="RAPID">RAPID</option>
+          </select>
+        </div>
+        <div><label>Wind Speed (m/s)</label><input id="inj-int-wind" placeholder="5.0" value="5.0"/></div>
+        <button class="btn btn-primary" onclick="injectFireIntensity()">📈 Inject Intensity Update</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <div class="card-title">Generic MQTT Publish (raw testing)</div>
+    <div class="cmd-panel">
+      <div><label>MQTT Topic</label><input id="pub-topic" placeholder="wfc/events/fire/intensity"/></div>
+      <div><label>JSON Payload</label><textarea id="pub-payload" rows="4" placeholder='{"fire_id":"test","new_intensity":"HIGH"}'></textarea></div>
+      <button class="btn btn-muted" onclick="publishRaw()">📤 Publish Raw</button>
+    </div>
+  </div>
+</section>
+
+</main>
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// Config
+// ══════════════════════════════════════════════
+const cfg = window.WFC_CONFIG || { MQTT_WS_HOST:'localhost', MQTT_WS_PORT:9001, MAP_PORT:8081 };
+
+// ══════════════════════════════════════════════
+// Navigation
+// ══════════════════════════════════════════════
+let currentPage = 'overview';
+document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    item.classList.add('active');
+    currentPage = item.dataset.page;
+    document.getElementById('page-' + currentPage).classList.add('active');
+  });
+});
+document.getElementById('open-map').addEventListener('click', () => {
+  window.open(`http://${location.hostname}:${cfg.MAP_PORT}/`, '_blank');
+});
+
+// ══════════════════════════════════════════════
+// Toast
+// ══════════════════════════════════════════════
+function toast(msg, ok = true) {
+  const el = document.createElement('div');
+  el.className = 'toast-msg ' + (ok ? 'toast-ok' : 'toast-err');
+  el.textContent = msg;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ══════════════════════════════════════════════
+// API helpers
+// ══════════════════════════════════════════════
+async function api(method, path, body) {
+  try {
+    const r = await fetch(path, {
+      method,
+      headers: body ? {'Content-Type':'application/json'} : {},
+      body:    body ? JSON.stringify(body) : undefined,
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || r.statusText);
+    return j;
+  } catch(e) { toast('Error: ' + e.message, false); throw e; }
+}
+
+// ══════════════════════════════════════════════
+// SSE State Stream
+// ══════════════════════════════════════════════
+let nodes = [], fires = [];
+const es = new EventSource('/api/stream');
+es.onmessage = e => {
+  const d = JSON.parse(e.data);
+  nodes = d.nodes || [];
+  fires = d.fires || [];
+  if (d.new_events) appendEvents(d.new_events);
+  render();
+};
+es.onerror = () => document.getElementById('broker-dot').classList.remove('ok');
+
+setInterval(async () => {
+  try {
+    const s = await fetch('/api/broker/status').then(r => r.json());
+    document.getElementById('broker-dot').classList.toggle('ok', s.connected);
+  } catch {}
+}, 5000);
+
+let elections = [], approvals = [];
+async function pollExtra() {
+  [elections, approvals] = await Promise.all([
+    fetch('/api/elections').then(r=>r.json()).catch(()=>[]),
+    fetch('/api/approvals').then(r=>r.json()).catch(()=>[]),
+  ]);
+}
+setInterval(pollExtra, 5000);
+pollExtra();
+
+// ══════════════════════════════════════════════
+// Event log
+// ══════════════════════════════════════════════
+let allEvents = [];
+function appendEvents(evs) { allEvents = [...allEvents, ...evs].slice(-300); }
+
+function renderEvents(ulId, maxItems = 40) {
+  const ul = document.getElementById(ulId);
+  if (!ul) return;
+  ul.innerHTML = allEvents.slice(-maxItems).reverse().map(ev => {
+    const t = new Date(ev.ts * 1000).toLocaleTimeString();
+    const cls = 'ev-' + (ev.type || '');
+    const detail = Object.entries(ev)
+      .filter(([k]) => !['ts','type'].includes(k))
+      .map(([k,v]) => `<span style="color:var(--muted)">${k}:</span> ${v}`)
+      .join('  ');
+    return `<li><span class="ev-ts">${t}</span><span class="${cls}">[${ev.type||'?'}]</span> <span style="color:var(--muted)">${detail}</span></li>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+// Render helpers — V2 ISO field names
+// ══════════════════════════════════════════════
+function leaders()    { return nodes.filter(n => n.node_type === 'SWARM_LEADER'); }
+function scouts()     { return nodes.filter(n => n.node_type === 'SCOUT_DRONE'); }
+function fighters()   { return nodes.filter(n => n.node_type === 'FIREFIGHTING_DRONE'); }
+function commanders() { return nodes.filter(n => n.node_type?.includes('COMMANDER')); }
+function drones()     { return [...scouts(), ...fighters()]; }
+
+function statusBadge(s) {
+  const cls = s === 'ONLINE' ? 'ONLINE' : 'OFFLINE';
+  return `<span class="nbadge ${cls}">${s}</span>`;
+}
+function intensityBadge(i) {
+  return i ? `<span class="badge badge-${i}">${i}</span>` : '';
+}
+function barHtml(pct) {
+  const p = Math.round((pct||0)*100);
+  const col = p>60?'var(--success)':p>30?'var(--warning)':'var(--danger)';
+  return `<div class="bar-wrap"><div class="bar" style="width:${p}%;background:${col}"></div></div>`;
+}
+
+// V2: position is [lat_deg, lon_deg] WGS-84
+function gpsStr(n) {
+  if (!n.location) return '—';
+  const [lat, lon] = n.location;
+  return `${(+lat).toFixed(5)}°N, ${(+lon).toFixed(5)}°E`;
+}
+
+// V2: battery shows Wh + percentage
+function battStr(n) {
+  if (n.battery_wh != null && n.battery_pct != null)
+    return `${n.battery_wh.toFixed(1)} Wh (${Math.round(n.battery_pct*100)}%)`;
+  if (n.battery_pct != null) return Math.round(n.battery_pct*100)+'%';
+  return '—';
+}
+
+// V2: payload in litres + kg
+function payloadStr(n) {
+  if (n.payload_litres != null && n.payload_kg != null)
+    return `${n.payload_litres.toFixed(2)} L (${n.payload_kg.toFixed(2)} kg)`;
+  if (n.payload_litres != null) return n.payload_litres.toFixed(2)+' L';
+  return '—';
+}
+
+function smallNodeCard(n) {
+  const age = ((Date.now()/1000) - (n.last_seen||0));
+  const status = age > 15 && n.status === 'ONLINE' ? 'STALE' : n.status;
+  return `<div class="node-card">
+    ${statusBadge(status)}
+    <div class="nt">${n.node_type?.replace(/_/g,' ')}</div>
+    <div class="nid">${n.node_id}</div>
+    ${n.zone ? `<div class="nzone">Zone: ${n.zone}</div>` : ''}
+    <div class="nloc">📍 ${gpsStr(n)}</div>
+    ${n.altitude_m_amsl != null ? `<div class="nrow"><span>Alt</span><span>${n.altitude_m_amsl.toFixed(0)} m AMSL</span></div>` : ''}
+    ${n.battery_wh != null ? `<div class="nrow"><span>Battery</span><span>${battStr(n)}</span></div>${barHtml(n.battery_pct)}` : ''}
+    ${n.task ? `<div class="nrow"><span>Task</span><span>${n.task}</span></div>` : ''}
+    ${n.pump_active ? `<div class="nrow"><span>Pump</span><span style="color:var(--danger)">● ACTIVE</span></div>` : ''}
+    ${n.perimeter_estimate_m!=null?`<div class="nrow"><span>Perimeter</span><span>${n.perimeter_estimate_m.toFixed(0)} m</span></div>`:''}
+  </div>`;
+}
+
+// ══════════════════════════════════════════════
+// Page Renders
+// ══════════════════════════════════════════════
+function render() {
+  renderOverview();
+  if (currentPage === 'fire-ops')      renderFireOps();
+  if (currentPage === 'drone-control') renderDroneControl();
+  if (currentPage === 'leaders')       renderLeaders();
+  if (currentPage === 'commanders')    renderCommanders();
+  if (currentPage === 'nodes')         renderNodes();
+  if (currentPage === 'elections')     renderElections();
+  if (currentPage === 'approvals')     renderApprovalsPage();
+  if (currentPage === 'events')        renderEvents('full-event-log', 200);
+  renderEvents('event-log', 30);
+}
+
+function renderOverview() {
+  const online = nodes.filter(n => n.status === 'ONLINE').length;
+  const activeFires = fires.filter(f => f.fire_status === 'ACTIVE' || f.fire_status === 'IGNITED').length;
+  document.getElementById('ov-total').textContent  = nodes.length;
+  document.getElementById('ov-online').textContent = online;
+  document.getElementById('ov-fires').textContent  = activeFires;
+  document.getElementById('ov-drones').textContent = drones().length;
+  document.getElementById('ov-nodes').innerHTML = nodes.slice(0,8).map(smallNodeCard).join('');
+  const fl = document.getElementById('ov-fires-list');
+  if (!fires.length) { fl.innerHTML = '<div style="color:var(--muted);padding:10px">No fires detected</div>'; return; }
+  fl.innerHTML = fires.map(f => `<div class="card" style="margin:4px 0;padding:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-weight:700">🔥 ${f.fire_id}</span>
+      ${intensityBadge(f.fire_intensity)}
+      <span class="badge badge-${f.fire_intensity}">${f.fire_status}</span>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px">
+      ${f.location_coords ? `📍 <span style="color:var(--accent2);font-family:monospace">${f.location_coords[0].toFixed(5)}°N, ${f.location_coords[1].toFixed(5)}°E</span>` : ''}
+      ${f.perimeter_m ? ` · Perimeter: ${f.perimeter_m.toFixed(0)} m` : ''}
+      ${f.leader_id ? ` · Leader: ${f.leader_id}` : ''}
+    </div>
+  </div>`).join('');
+}
+
+function renderFireOps() {
+  const ft = document.getElementById('fo-fires-table');
+  ft.innerHTML = fires.length ? `<table><thead><tr>
+    <th>Fire ID</th><th>Intensity</th><th>Status</th><th>Location (WGS-84)</th>
+    <th>Perimeter</th><th>Wind</th><th>Leader</th>
+  </tr></thead><tbody>
+    ${fires.map(f => `<tr>
+      <td><b>${f.fire_id}</b></td>
+      <td>${intensityBadge(f.fire_intensity)}</td>
+      <td>${f.fire_status}</td>
+      <td style="font-family:monospace;color:var(--accent2);font-size:10px">
+        ${f.location_coords ? `${f.location_coords[0].toFixed(5)}°N<br>${f.location_coords[1].toFixed(5)}°E` : '—'}
+      </td>
+      <td>${f.perimeter_m != null ? f.perimeter_m.toFixed(0)+' m' : '—'}</td>
+      <td>${f.wind_speed_mps != null ? f.wind_speed_mps.toFixed(1)+' m/s' : '—'}</td>
+      <td>${f.leader_id||'—'}</td>
+    </tr>`).join('')}
+  </tbody></table>` : '<div style="color:var(--muted)">No fires</div>';
+
+  const ls = document.getElementById('fo-leaders-status');
+  const ldrs = leaders();
+  if (!ldrs.length) { ls.innerHTML = '<div style="color:var(--muted)">No leaders seen</div>'; return; }
+  ls.innerHTML = `<div class="grid grid-3">${ldrs.map(l => `<div class="node-card">
+    ${statusBadge(l.status)}
+    <div class="nt">Swarm Leader</div><div class="nid">${l.node_id}</div>
+    <div class="nloc">📍 ${gpsStr(l)}</div>
+    ${l.swarm_status ? `<div class="nrow"><span>Swarm</span><span>${l.swarm_status}</span></div>` : ''}
+    ${l.fire_intensity ? `<div class="nrow"><span>Fire</span>${intensityBadge(l.fire_intensity)}</div>` : ''}
+    ${l.active_drones != null ? `<div class="nrow"><span>Active Drones</span><span>${l.active_drones}</span></div>` : ''}
+    ${l.avg_payload_litres != null ? `<div class="nrow"><span>Avg Payload</span><span>${l.avg_payload_litres.toFixed(1)} L</span></div>` : ''}
+    ${l.total_litres_delivered != null ? `<div class="nrow"><span>Total Delivered</span><span>${l.total_litres_delivered.toFixed(1)} L</span></div>` : ''}
+    ${l.suppression_pct != null ? `<div class="nrow"><span>Suppression</span><span>${Math.round(l.suppression_pct*100)}%</span></div>${barHtml(l.suppression_pct)}` : ''}
+    <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-sm btn-warning" onclick="quickFire('${l.node_id}')">🔥 Respond</button>
+      <button class="btn btn-sm btn-muted" onclick="quickStandDown('${l.node_id}')">🏳 Stand Down</button>
+    </div>
+  </div>`).join('')}</div>`;
+}
+
+function renderDroneControl() {
+  document.getElementById('dc-drones').innerHTML = drones().slice(0,6).map(smallNodeCard).join('');
+  // V2: ISO column headers
+  document.getElementById('dc-drone-table').innerHTML = drones().length ? `<table>
+    <thead><tr>
+      <th>ID</th><th>Type</th><th>Status</th><th>Task</th>
+      <th>Battery (Wh / %)</th><th>Payload (L / kg)</th>
+      <th>Connectivity</th><th>Altitude (m AMSL)</th>
+      <th>GPS (lat°N, lon°E)</th>
+      <th>Thermal (°C)</th><th>Smoke (mg/m³)</th>
+      <th>Flame (m)</th><th>Wind (m/s)</th>
+      <th>Delivered (L)</th><th>Drops</th>
+    </tr></thead>
+    <tbody>${drones().map(n => `<tr>
+      <td><b>${n.node_id}</b></td>
+      <td style="font-size:10px;color:var(--muted)">${n.node_type?.replace('_DRONE','')}</td>
+      <td>${statusBadge(n.status)}</td>
+      <td>${n.task||'—'}</td>
+      <td>${battStr(n)}</td>
+      <td>${payloadStr(n)}</td>
+      <td>${n.connectivity||'—'}</td>
+      <td>${n.altitude_m_amsl != null ? n.altitude_m_amsl.toFixed(0) : '—'}</td>
+      <td style="font-family:monospace;font-size:10px;color:var(--accent2)">${gpsStr(n)}</td>
+      <td>${n.thermal_peak_temp_c != null ? n.thermal_peak_temp_c.toFixed(1) : '—'}</td>
+      <td>${n.smoke_density_mg_m3 != null ? n.smoke_density_mg_m3.toFixed(0) : '—'}</td>
+      <td>${n.flame_height_m != null ? n.flame_height_m.toFixed(1) : '—'}</td>
+      <td>${n.wind_speed_mps != null ? n.wind_speed_mps.toFixed(1) : '—'}</td>
+      <td>${n.litres_delivered != null ? n.litres_delivered.toFixed(2) : '—'}</td>
+      <td>${n.drop_passes ?? '—'}</td>
+    </tr>`).join('')}</tbody>
+  </table>` : '<div style="color:var(--muted)">No drones seen yet</div>';
+}
+
+function renderLeaders() {
+  document.getElementById('ldr-cards').innerHTML = leaders().map(l => `<div class="node-card">
+    ${statusBadge(l.status)}
+    <div class="nt">Swarm Leader</div><div class="nid">${l.node_id}</div>
+    ${l.zone ? `<div class="nzone">Zone: ${l.zone}</div>` : ''}
+    <div class="nloc">📍 ${gpsStr(l)}</div>
+    <div class="nrow"><span>Swarm Status</span><span>${l.swarm_status||'—'}</span></div>
+    <div class="nrow"><span>Active Drones</span><span>${l.active_drones??'—'}</span></div>
+    <div class="nrow"><span>Lost Drones</span><span style="color:${(l.lost_drones||0)>0?'var(--danger)':'var(--success)'}">${l.lost_drones??'—'}</span></div>
+    <div class="nrow"><span>Avg Battery</span><span>${l.avg_battery_pct!=null?Math.round(l.avg_battery_pct*100)+'%':'—'}</span></div>
+    ${l.min_battery_wh!=null?`<div class="nrow"><span>Min Battery</span><span>${l.min_battery_wh.toFixed(1)} Wh</span></div>`:''}
+    <div class="nrow"><span>Fire Intensity</span>${intensityBadge(l.fire_intensity)}</div>
+    ${l.suppression_pct!=null?`<div class="nrow"><span>Suppression</span><span>${Math.round(l.suppression_pct*100)}%</span></div>${barHtml(l.suppression_pct)}`:''}
+    ${l.spread_rate?`<div class="nrow"><span>Spread Rate</span><span>${l.spread_rate}</span></div>`:''}
+    ${l.perimeter_estimate!=null?`<div class="nrow"><span>Perimeter</span><span>${l.perimeter_estimate.toFixed(0)} m</span></div>`:''}
+    ${l.avg_payload_litres!=null?`<div class="nrow"><span>Avg Payload</span><span>${l.avg_payload_litres.toFixed(1)} L</span></div>`:''}
+    ${l.total_litres_delivered!=null?`<div class="nrow"><span>Total Delivered</span><span>${l.total_litres_delivered.toFixed(1)} L</span></div>`:''}
+    ${l.wind_speed_mps_snap!=null?`<div class="nrow"><span>Wind</span><span>${l.wind_speed_mps_snap.toFixed(1)} m/s · ${l.wind_direction_deg_snap?.toFixed(0)||'—'}°T</span></div>`:''}
+    <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-sm btn-warning" onclick="quickFire('${l.node_id}')">🔥 Respond to Fire</button>
+      <button class="btn btn-sm btn-muted" onclick="quickStandDown('${l.node_id}')">🏳 Stand Down</button>
+    </div>
+  </div>`).join('') || '<div style="color:var(--muted)">No leaders seen yet</div>';
+}
+
+function renderCommanders() {
+  document.getElementById('cmd-cards').innerHTML = commanders().map(c => `<div class="node-card">
+    ${statusBadge(c.status)}
+    <div class="nt">Commander</div><div class="nid">${c.node_id}</div>
+    ${c.is_active_commander ? '<span class="badge badge-LOW" style="margin-top:4px">● ACTIVE</span>' : '<span class="badge badge-HIGH" style="margin-top:4px">BACKUP</span>'}
+    ${c.commander_term!=null?`<div class="nrow"><span>Term</span><span>${c.commander_term}</span></div>`:''}
+    <div class="nloc">📍 ${gpsStr(c)}</div>
+  </div>`).join('') || '<div style="color:var(--muted)">No commanders seen</div>';
+  renderApprovalsInline('apv-list');
+}
+
+function renderNodes() {
+  document.getElementById('nodes-tbody').innerHTML = nodes.map(n => {
+    const age = Math.round((Date.now()/1000) - (n.last_seen||0));
+    return `<tr>
+      <td><b>${n.node_id}</b></td>
+      <td style="font-size:10px;color:var(--muted)">${n.node_type?.replace(/_/g,' ')}</td>
+      <td>${statusBadge(n.status)}</td>
+      <td>${n.zone||'—'}</td>
+      <td style="font-family:monospace;color:var(--accent2);font-size:10px">${gpsStr(n)}</td>
+      <td style="color:${age>15?'var(--warning)':'var(--muted)'}">${age}s ago</td>
+      <td>${n.task||n.swarm_status||'—'}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" style="color:var(--muted)">No nodes seen</td></tr>';
+}
+
+function renderElections() {
+  document.getElementById('elections-tbody').innerHTML = elections.slice().reverse().map(e => {
+    const t = e.ts ? new Date(e.ts*1000).toLocaleTimeString() : '—';
+    return `<tr>
+      <td style="font-family:monospace">${t}</td>
+      <td>${e.zone||'—'}</td>
+      <td style="color:var(--success);font-weight:700">${e.new_leader_id||e.winner||'—'}</td>
+      <td style="color:var(--muted)">${e.old_leader_id||e.old_leader||'—'}</td>
+      <td>${e.term||'—'}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" style="color:var(--muted)">No election events</td></tr>';
+}
+
+function renderApprovalsInline(id) {
+  const el = document.getElementById(id); if (!el) return;
+  if (!approvals.length) { el.innerHTML = '<div style="color:var(--muted)">No pending approvals</div>'; return; }
+  el.innerHTML = approvals.slice(-10).reverse().map(a => `<div class="card" style="margin:4px 0;border-left:3px solid var(--warning)">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-weight:700">${a.command_type||'COMMAND'}</span>
+      <span style="font-family:monospace;font-size:10px;color:var(--muted)">${(a.request_id||'').slice(0,8)}</span>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin:4px 0">Target: ${a.target_node||'—'}  |  From: ${a.from||'—'}</div>
+    <div style="display:flex;gap:6px;margin-top:6px">
+      <button class="btn btn-sm btn-success" onclick="approval('${a.request_id}', true)">✓ Approve</button>
+      <button class="btn btn-sm btn-danger"  onclick="approval('${a.request_id}', false)">✗ Reject</button>
+    </div>
+  </div>`).join('');
+}
+
+function renderApprovalsPage() { renderApprovalsInline('approvals-list'); }
+
+// ══════════════════════════════════════════════
+// Commands
+// ══════════════════════════════════════════════
+async function fireCmd(action) {
+  const leader = document.getElementById('fo-leader').value.trim();
+  if (!leader) { toast('Enter a leader ID', false); return; }
+  // V2: location is [lat_deg, lon_deg] WGS-84
+  const body = {
+    leader_id: leader,
+    fire_id:   document.getElementById('fo-fire-id').value.trim(),
+    location:  [
+      parseFloat(document.getElementById('fo-lat').value) || 36.8165,
+      parseFloat(document.getElementById('fo-lon').value) || 10.2015,
+    ],
+  };
+  const r = await api('POST', `/api/fire/${action}`, body);
+  if (r.ok) toast(`✓ ${action.toUpperCase()} sent to ${leader}`);
+}
+
+async function droneCmd() {
+  const drone = document.getElementById('dc-drone').value.trim();
+  if (!drone) { toast('Enter a drone ID', false); return; }
+  let payload = {};
+  try { payload = JSON.parse(document.getElementById('dc-payload').value || '{}'); }
+  catch { toast('Invalid JSON payload', false); return; }
+  const r = await api('POST', '/api/drone/command', {
+    drone_id: drone,
+    command_type: document.getElementById('dc-cmd').value,
+    payload,
+  });
+  if (r.ok) toast(`✓ Command sent to ${drone}`);
+}
+
+async function leaderCmd() {
+  const id = document.getElementById('ldr-id').value.trim();
+  if (!id) { toast('Enter leader ID', false); return; }
+  let payload = {};
+  try { payload = JSON.parse(document.getElementById('ldr-payload').value || '{}'); }
+  catch { toast('Invalid JSON', false); return; }
+  const r = await api('POST', '/api/leader/command', {
+    leader_id: id, command_type: document.getElementById('ldr-cmd').value, payload,
+  });
+  if (r.ok) toast('✓ Leader command sent');
+}
+
+async function quickFire(leaderId) {
+  // V2: use real GPS coords near the swarm deployment area
+  const r = await api('POST', '/api/fire/respond', {
+    leader_id: leaderId, location: [36.8165, 10.2015]
+  });
+  if (r.ok) toast(`✓ RESPOND_TO_FIRE → ${leaderId}`);
+}
+async function quickStandDown(leaderId) {
+  const r = await api('POST', '/api/fire/stand_down', { leader_id: leaderId });
+  if (r.ok) toast(`✓ STAND_DOWN → ${leaderId}`);
+}
+
+async function approval(requestId, approved) {
+  const r = await api('POST', '/api/approval/respond', {
+    request_id: requestId, approved,
+    reason: approved ? 'Approved via dashboard' : 'Rejected via dashboard',
+  });
+  if (r.ok) { toast(approved ? '✓ Approved' : '✓ Rejected'); pollExtra(); }
+}
+
+// V2: TWO separate fire injection functions matching the two trigger paths
+async function injectFireSensor() {
+  const lat = parseFloat(document.getElementById('inj-lat').value) || 36.8165;
+  const lon = parseFloat(document.getElementById('inj-lon').value) || 10.2015;
+  const r = await api('POST', '/api/inject/fire/sensor', {
+    fire_id:         document.getElementById('inj-fire-id').value.trim(),
+    zone:            document.getElementById('inj-zone').value.trim() || 'zone_alpha',
+    severity:        document.getElementById('inj-severity').value,
+    sensor_id:       document.getElementById('inj-sensor-id').value.trim() || 'sim-sensor-01',
+    location_coords: [lat, lon],  // WGS-84
+  });
+  if (r.ok) toast(`🔥 Sensor fire injected: ${r.fire_id} (${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E)`);
+}
+
+async function injectFireIntensity() {
+  const r = await api('POST', '/api/inject/fire/intensity', {
+    fire_id:        document.getElementById('inj-int-fire-id').value.trim(),
+    leader_id:      document.getElementById('inj-int-leader-id').value.trim() || 'sl-A-01',
+    new_intensity:  document.getElementById('inj-int-intensity').value,
+    perimeter_m:    parseFloat(document.getElementById('inj-int-perimeter').value) || 150.0,
+    spread_rate:    document.getElementById('inj-int-spread').value,
+    wind_speed_mps: parseFloat(document.getElementById('inj-int-wind').value) || 5.0,
+  });
+  if (r.ok) toast(`📈 Intensity update injected: ${r.fire_id} → ${document.getElementById('inj-int-intensity').value}`);
+}
+
+async function publishRaw() {
+  const topic = document.getElementById('pub-topic').value.trim();
+  let payload = {};
+  try { payload = JSON.parse(document.getElementById('pub-payload').value); }
+  catch { toast('Invalid JSON', false); return; }
+  const r = await fetch('/api/inject/raw', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ topic, payload }),
+  });
+  if (r.ok) toast(`✓ Published to ${topic}`);
+  else toast('❌ Publish failed', false);
+}
+</script>
+</body>
+</html>

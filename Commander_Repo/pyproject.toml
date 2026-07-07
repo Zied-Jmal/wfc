@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=72", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wfc-commander"
+version = "1.0.0"
+description = "WFC Commander — rule engine, dispatch, approval gate, state sync"
+requires-python = ">=3.14"
+dependencies = [
+    "paho-mqtt>=2.1.0,<3",
+    "pydantic>=2.7.0,<3",
+    "python-dotenv>=1.0.1,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0,<9",
+    "pytest-timeout>=2.3.0,<3",
+    "ruff>=0.5.0,<1",
+    "pre-commit>=3.7.0,<4",
+]
+
+[tool.setuptools.packages.find]
+include = ["command_nodes*", "core*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "unit: unit tests",
+    "component: component tests",
+    "repo_integration: requires Docker",
+]

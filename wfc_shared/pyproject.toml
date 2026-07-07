@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=72", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wfc-shared"
+version = "1.0.0"
+description = "WFC system wire contract — schemas, enums, topic constants"
+requires-python = ">=3.14"
+dependencies = [
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "mypy"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["wfc_shared*"]
+
+[tool.pyright]
+typeCheckingMode = "strict"

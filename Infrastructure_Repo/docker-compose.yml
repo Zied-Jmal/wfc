@@ -1,0 +1,257 @@
+# Infrastructure_Repo/docker-compose.yml — WFC Full-Stack
+# ════════════════════════════════════════════════════════════════════
+# Run from inside Infrastructure_Repo/:
+#
+#   docker compose up --build
+#
+# Test console:  http://localhost:9090
+# Dashboard:     http://localhost:8080
+# Map view:      http://localhost:8081
+#
+# EXPECTED LAYOUT (this file assumes it lives at
+# <PROJECT_ROOT>/Infrastructure_Repo/docker-compose.yml):
+#
+#   <PROJECT_ROOT>/
+#     Commander_Repo/
+#     Swarm_Repo/
+#     Dashboard_Repo/
+#     Infrastructure_Repo/   ← this file lives here
+#       docker-compose.yml
+#       docker/mosquitto.conf
+#     wfc_shared/
+#     Integration_Tests/
+#
+# All build contexts below are therefore ".." relative to
+# this file. If you move this compose file, update the contexts.
+# ════════════════════════════════════════════════════════════════════
+
+networks:
+  wfc-net:
+    driver: bridge
+    name: wfc-net
+
+volumes:
+  mosquitto-data:
+  mosquitto-log:
+  wfc-data:
+
+x-common-env: &common-env
+  MQTT_HOST: mosquitto
+  MQTT_PORT: "1883"
+  PYTHONUNBUFFERED: "1"
+  ENV: docker
+  DEBUG: "1"
+  DEBUG_LEVEL: TRACE
+  DEBUG_CHANNELS: "BUS,COMMANDS,APPROVAL,TRACKER,MQTT,HEARTBEAT,SYSTEM,REGISTRY,RULES,STATE"
+
+x-zone-alpha-wind: &zone-alpha-wind
+  HOME_ALT_M: "50.0"
+  WIND_SPEED_MPS: "5.0"
+  WIND_DIR_DEG: "225.0"
+  TURBULENCE: "LIGHT"
+
+services:
+
+  # ── MQTT Broker ─────────────────────────────────────────────
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: wfc-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./docker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+    networks: [wfc-net]
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ── Commander: Central ───────────────────────────────────────
+  central-command:
+    build:
+      context: ..
+      dockerfile: Commander_Repo/Dockerfile
+    container_name: wfc-central
+    environment:
+      <<: *common-env
+      NODE_ID: central-commander
+      NODE_TYPE: CENTRAL_COMMANDER
+    command: ["python", "-m", "command_nodes.central.main"]
+    networks: [wfc-net]
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    volumes:
+      - wfc-data:/app/data
+    restart: unless-stopped
+
+  # ── Commander: Backup ────────────────────────────────────────
+  backup-command:
+    build:
+      context: ..
+      dockerfile: Commander_Repo/Dockerfile
+    container_name: wfc-backup
+    environment:
+      <<: *common-env
+      NODE_ID: backup-commander
+      NODE_TYPE: BACKUP_COMMANDER
+    command: ["python", "-m", "command_nodes.backup.main"]
+    networks: [wfc-net]
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      central-command:
+        condition: service_started
+    volumes:
+      - wfc-data:/app/data
+    restart: unless-stopped
+
+  # ── Swarm Leaders (1 active + 1 backup — required for election tests) ──
+  sl-A-01:
+    image: wfc/sl-a-01
+    build:
+      context: ..
+      dockerfile: Swarm_Repo/Dockerfile.leader
+    container_name: sl-A-01
+    environment:
+      <<: *common-env
+      NODE_ID: sl-A-01
+      NODE_ZONE: zone_alpha
+      NODE_LOCATION: "36.8065,10.1815"
+      IS_BACKUP: "false"
+      BACKUP_PEERS: "sl-A-02"
+      SWARM_STATUS_INTERVAL: "10"
+      LEADER_HEARTBEAT_TIMEOUT: "10"
+      ELECTION_TIMEOUT: "5"
+    networks: [wfc-net]
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    restart: unless-stopped
+
+  sl-A-02:
+    image: wfc/sl-a-02
+    build:
+      context: ..
+      dockerfile: Swarm_Repo/Dockerfile.leader
+    container_name: sl-A-02
+    environment:
+      <<: *common-env
+      NODE_ID: sl-A-02
+      NODE_ZONE: zone_alpha
+      NODE_LOCATION: "36.8085,10.1835"
+      IS_BACKUP: "true"
+      BACKUP_PEERS: "sl-A-01"
+      SWARM_STATUS_INTERVAL: "10"
+      LEADER_HEARTBEAT_TIMEOUT: "10"
+      ELECTION_TIMEOUT: "5"
+    networks: [wfc-net]
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Scout Drone ───────────────────────────────────────────────
+  sd-A-01:
+    image: wfc/sd-a-01
+    build:
+      context: ..
+      dockerfile: Swarm_Repo/Dockerfile.scout
+    container_name: sd-A-01
+    environment:
+      <<: [*common-env, *zone-alpha-wind]
+      NODE_ID: sd-A-01
+      NODE_ZONE: zone_alpha
+      NODE_LOCATION: "36.8070,10.1825"
+      LEADER_ID: sl-A-01
+      INITIAL_BATTERY_WH: "585.9"
+    networks: [wfc-net]
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Firefighting Drone ───────────────────────────────────────
+  fd-A-01:
+    image: wfc/fd-a-01
+    build:
+      context: ..
+      dockerfile: Swarm_Repo/Dockerfile.fighter
+    container_name: fd-A-01
+    environment:
+      <<: [*common-env, *zone-alpha-wind]
+      NODE_ID: fd-A-01
+      NODE_ZONE: zone_alpha
+      NODE_LOCATION: "36.8065,10.1840"
+      LEADER_ID: sl-A-01
+      PAYLOAD_TYPE: water
+      INITIAL_PAYLOAD_L: "100.0"
+      INITIAL_BATTERY_WH: "585.9"
+      DRONE_TANK_CAPACITY_L: "100.0"
+      DRONE_PUMP_FLOW_RATE_L_S: "25.0"
+      DRONE_LOW_PAYLOAD_L: "1.5"
+      SUPPRESS_DROP_ALTITUDE_M: "20.0"
+      SUPPRESS_APPROACH_SPEED_MPS: "6.0"
+      SUPPRESS_TRANSIT_SPEED_MPS: "14.0"
+      SUPPRESS_EGRESS_SPEED_MPS: "14.0"
+      SUPPRESS_APPROACH_DISTANCE_M: "120.0"
+      SUPPRESS_EGRESS_DISTANCE_M: "100.0"
+    networks: [wfc-net]
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Dashboard ─────────────────────────────────────────────────
+  dashboard:
+    build:
+      context: ..
+      dockerfile: Dashboard_Repo/Dockerfile
+    container_name: wfc-dashboard
+    environment:
+      <<: *common-env
+      NODE_ID: dashboard
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    networks: [wfc-net]
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/broker/status')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # ── Test Orchestrator (Integration_Tests) ───────────────────────
+  test-orchestrator:
+    build:
+      context: ..
+      dockerfile: Integration_Tests/Dockerfile
+    container_name: wfc-test-orchestrator
+    environment:
+      <<: *common-env
+    ports:
+      - "9090:9090"
+    networks: [wfc-net]
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      dashboard:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9090/api/scenarios')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped

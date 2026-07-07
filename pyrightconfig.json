@@ -1,0 +1,14 @@
+{
+    "typeCheckingMode": "strict",
+    "include": [
+        "wfc_shared",
+        "Swarm_Repo",
+        "Commander_Repo",
+        "Dashboard_Repo",
+        "Integration_Tests",
+        "tests"
+    ],
+    "extraPaths": [
+        "wfc_shared"
+    ]
+}

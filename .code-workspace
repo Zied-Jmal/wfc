@@ -1,0 +1,14 @@
+{
+    "folders": [
+        { "path": "Commander_Repo" },
+        { "path": "Dashboard_Repo" },
+        { "path": "Docs" },
+        { "path": "Infrastructure_Repo" },
+        { "path": "Integration_Tests" },
+        { "path": "Shared_Folder" },
+        { "path": "Swarm_Repo" }
+    ],
+    "settings": {
+        // optional global settings
+    }
+}

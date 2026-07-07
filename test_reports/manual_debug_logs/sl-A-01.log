@@ -1,0 +1,80 @@
+[2026-07-02T02:07:58.717Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] published status snapshot active=2 intensity=LOW
+[2026-07-02T02:07:58.768Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] received REINFORCE_FIRE trace=eedbbf32
+[2026-07-02T02:07:58.769Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK RECEIVED trace=eedbbf32
+[2026-07-02T02:07:58.769Z] [COMMANDS ] [INFO   ] [SwarmLeaderNode] executing REINFORCE_FIRE
+[2026-07-02T02:07:58.769Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] command execution failed: FireTactics.assign_reinforce() missing 1 required positional argument: 'current_count'
+[2026-07-02T02:07:58.769Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK FAILED trace=eedbbf32
+[2026-07-02T02:08:00.932Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] duplicate command trace=ca5f624a ÔÇö already handled, skipped
+[2026-07-02T02:08:00.932Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK EXECUTED trace=ca5f624a
+[2026-07-02T02:08:03.023Z] [SYSTEM   ] [INFO   ] [FireTactics] LOW PAYLOAD fd-A-01: 1.00 L
+[2026-07-02T02:08:03.024Z] [COMMANDS ] [INFO   ] [SwarmLeaderNode] ÔåÆ RECALL_DRONE to fd-A-01 trace=c8705d3c
+[2026-07-02T02:08:08.718Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] published status snapshot active=2 intensity=LOW
+[2026-07-02T02:08:08.768Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] received REINFORCE_FIRE trace=69afd531
+[2026-07-02T02:08:08.769Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK RECEIVED trace=69afd531
+[2026-07-02T02:08:08.769Z] [COMMANDS ] [INFO   ] [SwarmLeaderNode] executing REINFORCE_FIRE
+[2026-07-02T02:08:08.769Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] command execution failed: FireTactics.assign_reinforce() missing 1 required positional argument: 'current_count'
+[2026-07-02T02:08:08.769Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK FAILED trace=69afd531
+[2026-07-02T02:08:11.041Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] duplicate command trace=ca5f624a ÔÇö already handled, skipped
+[2026-07-02T02:08:11.041Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK EXECUTED trace=ca5f624a
+[2026-07-02T02:08:18.720Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] published status snapshot active=2 intensity=LOW
+[2026-07-02T02:08:18.768Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] received REINFORCE_FIRE trace=a1417ea9
+[2026-07-02T02:08:18.769Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK RECEIVED trace=a1417ea9
+[2026-07-02T02:08:18.769Z] [COMMANDS ] [INFO   ] [SwarmLeaderNode] executing REINFORCE_FIRE
+[2026-07-02T02:08:18.769Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] command execution failed: FireTactics.assign_reinforce() missing 1 required positional argument: 'current_count'
+[2026-07-02T02:08:18.769Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK FAILED trace=a1417ea9
+[2026-07-02T02:08:21.131Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] duplicate command trace=ca5f624a ÔÇö already handled, skipped
+[2026-07-02T02:08:21.131Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK EXECUTED trace=ca5f624a
+[2026-07-02T02:08:27.029Z] [SYSTEM   ] [INFO   ] [FireTactics] RAPID spread: 1 fighters ÔåÆ hot flank (36.807858334388186, 10.182757912808597)
+[2026-07-02T02:08:27.030Z] [COMMANDS ] [INFO   ] [SwarmLeaderNode] ÔåÆ UPDATE_TASK to fd-A-01 trace=362da111
+[2026-07-02T02:08:28.719Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] published status snapshot active=2 intensity=LOW
+[2026-07-02T02:08:28.766Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] received REINFORCE_FIRE trace=3860114a
+[2026-07-02T02:08:28.766Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK RECEIVED trace=3860114a
+[2026-07-02T02:08:28.766Z] [COMMANDS ] [INFO   ] [SwarmLeaderNode] executing REINFORCE_FIRE
+[2026-07-02T02:08:28.766Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] command execution failed: FireTactics.assign_reinforce() missing 1 required positional argument: 'current_count'
+[2026-07-02T02:08:28.766Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK FAILED trace=3860114a
+[2026-07-02T02:08:31.235Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] duplicate command trace=ca5f624a ÔÇö already handled, skipped
+[2026-07-02T02:08:31.236Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK EXECUTED trace=ca5f624a
+[2026-07-02T02:08:38.721Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] published status snapshot active=2 intensity=LOW
+[2026-07-02T02:08:38.766Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] received REINFORCE_FIRE trace=aa679bde
+[2026-07-02T02:08:38.766Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK RECEIVED trace=aa679bde
+[2026-07-02T02:08:38.766Z] [COMMANDS ] [INFO   ] [SwarmLeaderNode] executing REINFORCE_FIRE
+[2026-07-02T02:08:38.767Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] command execution failed: FireTactics.assign_reinforce() missing 1 required positional argument: 'current_count'
+[2026-07-02T02:08:38.767Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK FAILED trace=aa679bde
+[2026-07-02T02:08:41.333Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] duplicate command trace=ca5f624a ÔÇö already handled, skipped
+[2026-07-02T02:08:41.333Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK EXECUTED trace=ca5f624a
+[2026-07-02T02:08:48.723Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] published status snapshot active=2 intensity=LOW
+[2026-07-02T02:08:48.766Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] received REINFORCE_FIRE trace=9f1c4932
+[2026-07-02T02:08:48.766Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK RECEIVED trace=9f1c4932
+[2026-07-02T02:08:48.766Z] [COMMANDS ] [INFO   ] [SwarmLeaderNode] executing REINFORCE_FIRE
+[2026-07-02T02:08:48.767Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] command execution failed: FireTactics.assign_reinforce() missing 1 required positional argument: 'current_count'
+[2026-07-02T02:08:48.767Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK FAILED trace=9f1c4932
+[2026-07-02T02:08:51.411Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] duplicate command trace=ca5f624a ÔÇö already handled, skipped
+[2026-07-02T02:08:51.412Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK EXECUTED trace=ca5f624a
+[2026-07-02T02:08:58.720Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] published status snapshot active=2 intensity=LOW
+[2026-07-02T02:08:58.762Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] received REINFORCE_FIRE trace=c533e6c4
+[2026-07-02T02:08:58.763Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK RECEIVED trace=c533e6c4
+[2026-07-02T02:08:58.763Z] [COMMANDS ] [INFO   ] [SwarmLeaderNode] executing REINFORCE_FIRE
+[2026-07-02T02:08:58.763Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] command execution failed: FireTactics.assign_reinforce() missing 1 required positional argument: 'current_count'
+[2026-07-02T02:08:58.763Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK FAILED trace=c533e6c4
+[2026-07-02T02:09:01.504Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] duplicate command trace=ca5f624a ÔÇö already handled, skipped
+[2026-07-02T02:09:01.504Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK EXECUTED trace=ca5f624a
+[2026-07-02T02:09:08.722Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] published status snapshot active=2 intensity=LOW
+[2026-07-02T02:09:08.772Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] received REINFORCE_FIRE trace=50ea275a
+[2026-07-02T02:09:08.772Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK RECEIVED trace=50ea275a
+[2026-07-02T02:09:08.773Z] [COMMANDS ] [INFO   ] [SwarmLeaderNode] executing REINFORCE_FIRE
+[2026-07-02T02:09:08.773Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] command execution failed: FireTactics.assign_reinforce() missing 1 required positional argument: 'current_count'
+[2026-07-02T02:09:08.773Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK FAILED trace=50ea275a
+[2026-07-02T02:09:09.041Z] [SYSTEM   ] [INFO   ] [FireTactics] LOW PAYLOAD fd-A-01: 1.00 L
+[2026-07-02T02:09:09.041Z] [COMMANDS ] [INFO   ] [SwarmLeaderNode] ÔåÆ RECALL_DRONE to fd-A-01 trace=8b7a9cdf
+[2026-07-02T02:09:11.608Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] duplicate command trace=ca5f624a ÔÇö already handled, skipped
+[2026-07-02T02:09:11.609Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK EXECUTED trace=ca5f624a
+[2026-07-02T02:09:18.724Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] published status snapshot active=2 intensity=LOW
+[2026-07-02T02:09:18.772Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] received REINFORCE_FIRE trace=bc30039c
+[2026-07-02T02:09:18.772Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK RECEIVED trace=bc30039c
+[2026-07-02T02:09:18.772Z] [COMMANDS ] [INFO   ] [SwarmLeaderNode] executing REINFORCE_FIRE
+[2026-07-02T02:09:18.772Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] command execution failed: FireTactics.assign_reinforce() missing 1 required positional argument: 'current_count'
+[2026-07-02T02:09:18.773Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK FAILED trace=bc30039c
+[2026-07-02T02:09:21.717Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] duplicate command trace=ca5f624a ÔÇö already handled, skipped
+[2026-07-02T02:09:21.717Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK EXECUTED trace=ca5f624a
+[2026-07-02T02:09:25.043Z] [SYSTEM   ] [INFO   ] [FireTactics] RAPID spread: 1 fighters ÔåÆ hot flank (36.80709310313755, 10.181196989026148)
+[2026-07-02T02:09:25.044Z] [COMMANDS ] [INFO   ] [SwarmLeaderNode] ÔåÆ UPDATE_TASK to fd-A-01 trace=9b5762e4
