@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=72", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wfc-dashboard"
+version = "1.0.0"
+description = "WFC Dashboard — web UI, REST API, SSE streaming, live map"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.115.0,<1",
+    "uvicorn[standard]>=0.30.6,<1",
+    "paho-mqtt>=2.1.0,<3",
+    "pydantic>=2.7.0,<3",
+    "python-dotenv>=1.0.1,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0,<9",
+    "pytest-timeout>=2.3.0,<3",
+    "ruff>=0.5.0,<1",
+    "pre-commit>=3.7.0,<4",
+]
+
+[tool.setuptools.packages.find]
+include = ["dashboard*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "unit: unit tests",
+    "component: component tests",
+    "repo_integration: requires Docker",
+]

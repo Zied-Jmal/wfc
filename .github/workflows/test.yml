@@ -1,0 +1,44 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: pip install ruff
+      - run: ruff check .
+      - run: ruff format --check .
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: pip install pyright
+      - run: pyright
+
+  test-unit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        repo: [wfc_shared, Commander_Repo, Swarm_Repo, Dashboard_Repo]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: pip install -e wfc_shared
+      - run: pip install -r ${{ matrix.repo }}/requirements-dev.txt
+      - run: pip install -e ${{ matrix.repo }}
+      - run: pytest ${{ matrix.repo }}/tests/unit -v --timeout=30

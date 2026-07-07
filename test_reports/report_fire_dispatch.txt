@@ -1,0 +1,376 @@
+================================================================================
+  E2E TEST REPORT: 1. Fire Dispatch End-to-End
+================================================================================
+  Scenario ID:   fire_dispatch
+  Run ID:        7d2be836
+  Overall Status: PASSED
+  Build Time:    44.8s
+  Run Time:      2.1s
+  Timestamp:     2026-07-01T05:56:02.655152
+
+------------------------------------------------------------
+  STAGE RESULTS (6 stages)
+------------------------------------------------------------
+
+  [PASSED ] A_commander_dispatch
+           Commander RuleEngine dispatches RESPOND_TO_FIRE
+           Component: Commander / RuleEngine
+           Duration:  0.9s
+
+  [PASSED ] B_leader_ack_received
+           Swarm Leader ACKs RECEIVED
+           Component: SwarmLeaderNode / FieldNode
+           Duration:  0.0s
+
+  [PASSED ] C_leader_ack_executed
+           Swarm Leader ACKs EXECUTED
+           Component: SwarmLeaderNode._execute_command
+           Duration:  0.0s
+
+  [PASSED ] D_drone_receives_command
+           A drone receives DISPATCH_DRONE/UPDATE_TASK
+           Component: FieldNode (drone side)
+           Duration:  0.0s
+
+  [PASSED ] E_drone_ack_executed
+           Drone ACKs EXECUTED
+           Component: FieldNode (drone side)
+           Duration:  0.0s
+
+  [PASSED ] F_drone_telemetry_flowing
+           Drone telemetry tagged with correct leader_id
+           Component: ScoutDroneNode / FirefightingDroneNode telemetry loop
+           Duration:  0.0s
+
+------------------------------------------------------------
+  TRANSCRIPT (26 messages, showing first 20)
+------------------------------------------------------------
+
+  [  0] wfc/registry/announce/sl-A-01
+          {
+            "node_id": "sl-A-01",
+            "node_type": "SWARM_LEADER",
+            "capabilities": [
+
+  [  1] wfc/registry/announce/sd-A-01
+          {
+            "node_id": "sd-A-01",
+            "node_type": "SCOUT_DRONE",
+            "capabilities": [
+
+  [  2] wfc/registry/announce/fd-A-01
+          {
+            "node_id": "fd-A-01",
+            "node_type": "FIREFIGHTING_DRONE",
+            "capabilities": [
+
+  [  3] wfc/registry/announce/sl-A-02
+          {
+            "node_id": "sl-A-02",
+            "node_type": "SWARM_LEADER",
+            "capabilities": [
+
+  [  4] wfc/registry/announce/backup-commander
+          {
+            "node_id": "backup-commander",
+            "node_type": "BACKUP_COMMANDER",
+            "capabilities": [
+
+  [  5] wfc/registry/announce/central-commander
+          {
+            "node_id": "central-commander",
+            "node_type": "CENTRAL_COMMANDER",
+            "capabilities": [
+
+  [  6] wfc/system/lease
+          {
+            "owner": "central-commander",
+            "term": 1,
+            "since": 1782878156.0668967
+
+  [  7] wfc/nodes/sd-A-01/heartbeat
+          {
+            "node_id": "sd-A-01",
+            "type": "SCOUT_DRONE",
+            "timestamp": 1782878158.9606457,
+
+  [  8] wfc/nodes/fd-A-01/heartbeat
+          {
+            "node_id": "fd-A-01",
+            "type": "FIREFIGHTING_DRONE",
+            "timestamp": 1782878158.9628174,
+
+  [  9] wfc/nodes/sl-A-01/heartbeat
+          {
+            "node_id": "sl-A-01",
+            "type": "SWARM_LEADER",
+            "timestamp": 1782878158.968589,
+
+  [ 10] wfc/nodes/sl-A-02/heartbeat
+          {
+            "node_id": "sl-A-02",
+            "type": "SWARM_LEADER",
+            "timestamp": 1782878158.968925,
+
+  [ 11] wfc/events/fire
+          {
+            "event_id": "40cbcbc0-db02-4742-8554-50947ba7209e",
+            "event_type": "FIRE_DETECTED",
+            "timestamp": 1782878159.1636705,
+
+  [ 12] wfc/telemetry/sd-A-01
+          {
+            "drone_id": "sd-A-01",
+            "leader_id": "sl-A-01",
+            "timestamp": 1782878159.9659648,
+
+  [ 13] wfc/telemetry/fd-A-01
+          {
+            "drone_id": "fd-A-01",
+            "leader_id": "sl-A-01",
+            "timestamp": 1782878159.9679775,
+
+  [ 14] wfc/nodes/backup-commander/heartbeat
+          {
+            "node_id": "backup-commander",
+            "type": "BACKUP_COMMANDER",
+            "timestamp": 1782878160.042668,
+
+  [ 15] wfc/command/sl-A-01
+          {
+            "trace_id": "03d9a27a-2a22-5cfd-b140-cf16a7c86fee",
+            "command_id": "363132c9-7f03-4151-82ad-c9caa98ad351",
+            "target_node": "sl-A-01",
+
+  [ 16] wfc/nodes/central-commander/heartbeat
+          {
+            "node_id": "central-commander",
+            "type": "CENTRAL_COMMANDER",
+            "timestamp": 1782878160.0440187,
+
+  [ 17] wfc/ack
+          {
+            "trace_id": "03d9a27a-2a22-5cfd-b140-cf16a7c86fee",
+            "node_id": "sl-A-01",
+            "status": "RECEIVED",
+
+  [ 18] wfc/command/sd-A-01
+          {
+            "trace_id": "3e96281d-bc06-4c9b-9898-af5fb80a428f",
+            "target_node": "sd-A-01",
+            "command_type": "UPDATE_TASK",
+
+  [ 19] wfc/command/fd-A-01
+          {
+            "trace_id": "307db803-d6b9-4332-a838-21b4b68a6635",
+            "target_node": "fd-A-01",
+            "command_type": "UPDATE_TASK",
+
+  ... (6 more messages)
+
+------------------------------------------------------------
+  DOCKER CONTAINER LOGS (last 30 lines each)
+------------------------------------------------------------
+
+  --- wfc-mosquitto ---
+  | 1782878144: Config loaded from /mosquitto/config/mosquitto.conf.
+  | 1782878144: Opening ipv4 listen socket on port 1883.
+  | 1782878144: Opening ipv6 listen socket on port 1883.
+  | 1782878144: Opening websockets listen socket on port 9001.
+  | 1782878144: mosquitto version 2.0.22 running
+  | 1782878144: New connection from 172.18.0.1:41824 on port 1883.
+  | 1782878144: New client connected from 172.18.0.1:41824 as mqtt-explorer-23788eda (p2, c1, k60).
+  | 1782878149: New connection from ::1:50324 on port 1883.
+  | 1782878149: New client connected from ::1:50324 as healthcheck (p2, c1, k60).
+  | 1782878149: Client healthcheck closed its connection.
+  | 1782878153: New connection from 172.18.0.4:59817 on port 1883.
+  | 1782878153: New connection from 172.18.0.6:50741 on port 1883.
+  | 1782878153: New connection from 172.18.0.5:34311 on port 1883.
+  | 1782878153: New connection from 172.18.0.3:59835 on port 1883.
+  | 1782878153: New client connected from 172.18.0.5:34311 as fd-A-01 (p2, c1, k60).
+  | 1782878153: New client connected from 172.18.0.6:50741 as sd-A-01 (p2, c1, k60).
+  | 1782878153: New client connected from 172.18.0.3:59835 as sl-A-01 (p2, c1, k60).
+  | 1782878153: New client connected from 172.18.0.4:59817 as sl-A-02 (p2, c1, k60).
+  | 1782878155: New connection from 172.18.0.7:53215 on port 1883.
+  | 1782878155: New connection from 172.18.0.9:42285 on port 1883.
+  | 1782878155: New client connected from 172.18.0.7:53215 as central-commander (p2, c1, k60).
+  | 1782878155: New client connected from 172.18.0.9:42285 as backup-commander (p2, c1, k60).
+  | 1782878155: New connection from 172.18.0.8:58611 on port 1883.
+  | 1782878155: New client connected from 172.18.0.8:58611 as wfc-ctrl-dash-bridge (p2, c1, k60).
+  | 1782878158: New connection from 172.18.0.10:32773 on port 1883.
+  | 1782878158: New client connected from 172.18.0.10:32773 as wfc-test-orchestrator (p2, c1, k60).
+  | 1782878159: New connection from ::1:57298 on port 1883.
+  | 1782878159: New client connected from ::1:57298 as healthcheck (p2, c1, k60).
+  | 1782878159: Client healthcheck closed its connection.
+  | chown: /mosquitto/config/mosquitto.conf: Read-only file system
+
+  --- wfc-central ---
+  | [2026-07-01T03:56:00.098Z] [RULES    ] [INFO   ] [RuleEngine] [leader_lost] skipped | fire_id=598a48c7 state=ACTIVE reason=election_already_resolved
+  | [2026-07-01T03:56:00.098Z] [RULES    ] [INFO   ] [RuleEngine] [swarm_attrition] skipped | fire_id=598a48c7 state=ACTIVE reason=not_telemetry
+  | [2026-07-01T03:56:00.098Z] [RULES    ] [INFO   ] [RuleEngine] [resource_exhaustion] skipped | fire_id=598a48c7 state=ACTIVE reason=not_telemetry
+  | [2026-07-01T03:56:00.098Z] [RULES    ] [INFO   ] [RuleEngine] [priority] skipped | fire_id=598a48c7 state=ACTIVE reason=fire_already_assigned
+  | [2026-07-01T03:56:00.098Z] [BUS      ] [VERBOSE] [CommanderCore] unhandled topic: wfc/telemetry/sd-A-01 (active=True)
+  | [2026-07-01T03:56:00.099Z] [BUS      ] [VERBOSE] [CommanderCore] unhandled topic: wfc/telemetry/fd-A-01 (active=True)
+  | [2026-07-01T03:56:00.099Z] [REGISTRY ] [INFO   ] [NodeRegistry] ACTIVE granted: backup-commander (first heartbeat validated)
+  | [2026-07-01T03:56:00.192Z] [SYSTEM   ] [INFO   ] [CommanderCore] NODE_BECAME_AVAILABLE callback fired for backup-commander caps=['FAILOVER', 'DISPATCH_COMMANDS', 'HEARTBEAT']
+  | [2026-07-01T03:56:00.193Z] [HEARTBEAT] [TRACE  ] [HeartbeatMonitor] heartbeat from backup-commander
+  | [2026-07-01T03:56:00.193Z] [BUS      ] [VERBOSE] [CommanderCore] unhandled topic: wfc/nodes/backup-commander/heartbeat (active=True)
+  | [2026-07-01T03:56:00.193Z] [BUS      ] [VERBOSE] [CommanderCore] unhandled topic: wfc/command/sl-A-01 (active=True)
+  | [2026-07-01T03:56:00.193Z] [REGISTRY ] [INFO   ] [NodeRegistry] ACTIVE granted: central-commander (first heartbeat validated)
+  | [2026-07-01T03:56:00.306Z] [SYSTEM   ] [INFO   ] [CommanderCore] NODE_BECAME_AVAILABLE callback fired for central-commander caps=['DISPATCH_COMMANDS', 'HEARTBEAT']
+  | [2026-07-01T03:56:00.306Z] [HEARTBEAT] [TRACE  ] [HeartbeatMonitor] heartbeat from central-commander
+  | [2026-07-01T03:56:00.306Z] [BUS      ] [VERBOSE] [CommanderCore] unhandled topic: wfc/nodes/central-commander/heartbeat (active=True)
+  | [2026-07-01T03:56:00.417Z] [TRACKER  ] [INFO   ] [CommandTracker] 03d9a27a-2a22-5cfd-b140-cf16a7c86fee: ISSUED â†’ RECEIVED
+  | [2026-07-01T03:56:00.418Z] [TRACKER  ] [INFO   ] [CommanderCore] ACK trace=03d9a27a status=RECEIVED from=sl-A-01 accepted=True
+  | [2026-07-01T03:56:00.490Z] [STATE    ] [INFO   ] [MissionStore] INVALID mission transition CREATEDâ†’RUNNING for eed87b12
+  | [2026-07-01T03:56:00.491Z] [BUS      ] [VERBOSE] [CommanderCore] unhandled topic: wfc/command/sd-A-01 (active=True)
+  | [2026-07-01T03:56:00.492Z] [BUS      ] [VERBOSE] [CommanderCore] unhandled topic: wfc/command/fd-A-01 (active=True)
+  | [2026-07-01T03:56:00.598Z] [TRACKER  ] [INFO   ] [CommandTracker] 03d9a27a-2a22-5cfd-b140-cf16a7c86fee: RECEIVED â†’ EXECUTED
+  | [2026-07-01T03:56:00.599Z] [TRACKER  ] [INFO   ] [CommanderCore] ACK trace=03d9a27a status=EXECUTED from=sl-A-01 accepted=True
+  | [2026-07-01T03:56:00.636Z] [TRACKER  ] [INFO   ] [CommandTracker] unknown trace_id=3e96281d-bc06-4c9b-9898-af5fb80a428f â€” dropped
+  | [2026-07-01T03:56:00.636Z] [TRACKER  ] [INFO   ] [CommanderCore] ACK trace=3e96281d status=RECEIVED from=sd-A-01 accepted=False
+  | [2026-07-01T03:56:00.637Z] [TRACKER  ] [INFO   ] [CommandTracker] unknown trace_id=3e96281d-bc06-4c9b-9898-af5fb80a428f â€” dropped
+  | [2026-07-01T03:56:00.637Z] [TRACKER  ] [INFO   ] [CommanderCore] ACK trace=3e96281d status=EXECUTED from=sd-A-01 accepted=False
+  | [2026-07-01T03:56:00.637Z] [TRACKER  ] [INFO   ] [CommandTracker] unknown trace_id=307db803-d6b9-4332-a838-21b4b68a6635 â€” dropped
+  | [2026-07-01T03:56:00.637Z] [TRACKER  ] [INFO   ] [CommanderCore] ACK trace=307db803 status=RECEIVED from=fd-A-01 accepted=False
+  | [2026-07-01T03:56:00.638Z] [TRACKER  ] [INFO   ] [CommandTracker] unknown trace_id=307db803-d6b9-4332-a838-21b4b68a6635 â€” dropped
+  | [2026-07-01T03:56:00.638Z] [TRACKER  ] [INFO   ] [CommanderCore] ACK trace=307db803 status=EXECUTED from=fd-A-01 accepted=False
+
+  --- wfc-backup ---
+  | [2026-07-01T03:55:55.149Z] [REGISTRY ] [INFO   ] [NodeRegistry] REGISTERED central-commander (CENTRAL_COMMANDER) caps=['DISPATCH_COMMANDS', 'HEARTBEAT'] zone=None location=None
+  | [2026-07-01T03:55:55.149Z] [REGISTRY ] [INFO   ] [RegistryBridge] registered central-commander (CENTRAL_COMMANDER) caps=['DISPATCH_COMMANDS', 'HEARTBEAT'] zone=None location=None
+  | [2026-07-01T03:55:55.174Z] [REGISTRY ] [INFO   ] [NodeRegistry] REGISTERED sl-A-01 (SWARM_LEADER) caps=['RECEIVE_COMMANDS', 'HEARTBEAT', 'TELEMETRY', 'SWARM_LEAD'] zone=zone_alpha location=(36.8065, 10.1815)
+  | [2026-07-01T03:55:55.174Z] [REGISTRY ] [INFO   ] [RegistryBridge] registered sl-A-01 (SWARM_LEADER) caps=['RECEIVE_COMMANDS', 'HEARTBEAT', 'TELEMETRY', 'SWARM_LEAD'] zone=zone_alpha location=(36.8065, 10.1815)
+  | [2026-07-01T03:55:55.198Z] [REGISTRY ] [INFO   ] [NodeRegistry] REGISTERED sd-A-01 (SCOUT_DRONE) caps=['RECEIVE_COMMANDS', 'HEARTBEAT', 'TELEMETRY', 'SCOUT'] zone=zone_alpha location=(36.807, 10.1825)
+  | [2026-07-01T03:55:55.198Z] [REGISTRY ] [INFO   ] [RegistryBridge] registered sd-A-01 (SCOUT_DRONE) caps=['RECEIVE_COMMANDS', 'HEARTBEAT', 'TELEMETRY', 'SCOUT'] zone=zone_alpha location=(36.807, 10.1825)
+  | [2026-07-01T03:55:55.199Z] [REGISTRY ] [INFO   ] [RegistryBridge] registered fd-A-01 (FIREFIGHTING_DRONE) caps=['RECEIVE_COMMANDS', 'HEARTBEAT', 'TELEMETRY', 'FIREFIGHTING'] zone=zone_alpha location=(36.8065, 10.184)
+  | [2026-07-01T03:55:55.199Z] [REGISTRY ] [INFO   ] [RegistryBridge] registered sl-A-02 (SWARM_LEADER) caps=['RECEIVE_COMMANDS', 'HEARTBEAT', 'TELEMETRY', 'LEADER_BACKUP'] zone=zone_alpha location=(36.8085, 10.1835)
+  | [2026-07-01T03:55:55.199Z] [REGISTRY ] [INFO   ] [RegistryBridge] registered backup-commander (BACKUP_COMMANDER) caps=['FAILOVER', 'DISPATCH_COMMANDS', 'HEARTBEAT'] zone=None location=None
+  | [2026-07-01T03:55:55.200Z] [REGISTRY ] [INFO   ] [RegistryBridge] registered central-commander (CENTRAL_COMMANDER) caps=['DISPATCH_COMMANDS', 'HEARTBEAT'] zone=None location=None
+  | [2026-07-01T03:55:58.962Z] [REGISTRY ] [INFO   ] [NodeRegistry] ACTIVE granted: sd-A-01 (first heartbeat validated)
+  | [2026-07-01T03:55:59.041Z] [SYSTEM   ] [INFO   ] [CommanderCore] NODE_BECAME_AVAILABLE callback fired for sd-A-01 caps=['RECEIVE_COMMANDS', 'HEARTBEAT', 'TELEMETRY', 'SCOUT']
+  | [2026-07-01T03:55:59.042Z] [HEARTBEAT] [TRACE  ] [HeartbeatMonitor] heartbeat from sd-A-01
+  | [2026-07-01T03:55:59.042Z] [REGISTRY ] [INFO   ] [NodeRegistry] ACTIVE granted: fd-A-01 (first heartbeat validated)
+  | [2026-07-01T03:55:59.112Z] [SYSTEM   ] [INFO   ] [CommanderCore] NODE_BECAME_AVAILABLE callback fired for fd-A-01 caps=['RECEIVE_COMMANDS', 'HEARTBEAT', 'TELEMETRY', 'FIREFIGHTING']
+  | [2026-07-01T03:55:59.113Z] [HEARTBEAT] [TRACE  ] [HeartbeatMonitor] heartbeat from fd-A-01
+  | [2026-07-01T03:55:59.113Z] [REGISTRY ] [INFO   ] [NodeRegistry] ACTIVE granted: sl-A-01 (first heartbeat validated)
+  | [2026-07-01T03:55:59.240Z] [SYSTEM   ] [INFO   ] [CommanderCore] NODE_BECAME_AVAILABLE callback fired for sl-A-01 caps=['RECEIVE_COMMANDS', 'HEARTBEAT', 'TELEMETRY', 'SWARM_LEAD']
+  | [2026-07-01T03:55:59.352Z] [RULES    ] [INFO   ] [CommanderCore] Re-evaluating active unassigned fires after sl-A-01 became available
+  | [2026-07-01T03:55:59.352Z] [RULES    ] [INFO   ] [CommanderCore] No active unassigned fires to re-evaluate
+  | [2026-07-01T03:55:59.352Z] [HEARTBEAT] [TRACE  ] [HeartbeatMonitor] heartbeat from sl-A-01
+  | [2026-07-01T03:55:59.352Z] [REGISTRY ] [INFO   ] [NodeRegistry] ACTIVE granted: sl-A-02 (first heartbeat validated)
+  | [2026-07-01T03:55:59.455Z] [SYSTEM   ] [INFO   ] [CommanderCore] NODE_BECAME_AVAILABLE callback fired for sl-A-02 caps=['RECEIVE_COMMANDS', 'HEARTBEAT', 'TELEMETRY', 'LEADER_BACKUP']
+  | [2026-07-01T03:55:59.455Z] [HEARTBEAT] [TRACE  ] [HeartbeatMonitor] heartbeat from sl-A-02
+  | [2026-07-01T03:56:00.044Z] [REGISTRY ] [INFO   ] [NodeRegistry] ACTIVE granted: backup-commander (first heartbeat validated)
+  | [2026-07-01T03:56:00.141Z] [SYSTEM   ] [INFO   ] [CommanderCore] NODE_BECAME_AVAILABLE callback fired for backup-commander caps=['FAILOVER', 'DISPATCH_COMMANDS', 'HEARTBEAT']
+  | [2026-07-01T03:56:00.141Z] [HEARTBEAT] [TRACE  ] [HeartbeatMonitor] heartbeat from backup-commander
+  | [2026-07-01T03:56:00.142Z] [REGISTRY ] [INFO   ] [NodeRegistry] ACTIVE granted: central-commander (first heartbeat validated)
+  | [2026-07-01T03:56:00.257Z] [SYSTEM   ] [INFO   ] [CommanderCore] NODE_BECAME_AVAILABLE callback fired for central-commander caps=['DISPATCH_COMMANDS', 'HEARTBEAT']
+  | [2026-07-01T03:56:00.257Z] [HEARTBEAT] [TRACE  ] [HeartbeatMonitor] heartbeat from central-commander
+
+  --- sl-A-01 ---
+  | [2026-07-01T03:55:53.965Z] [HEARTBEAT] [INFO   ] [Heartbeat] started (interval=5s)
+  | [2026-07-01T03:55:53.968Z] [REGISTRY ] [INFO   ] [BaseNode] announced sl-A-01 (SWARM_LEADER) caps=['RECEIVE_COMMANDS', 'HEARTBEAT', 'TELEMETRY', 'SWARM_LEAD'] zone=zone_alpha location=(36.8065, 10.1815)
+  | [2026-07-01T03:55:53.968Z] [SYSTEM   ] [INFO   ] [BaseNode] sl-A-01 started
+  | [2026-07-01T03:55:53.969Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] sl-A-01 ready â€” zone=zone_alpha location=(36.8065, 10.1815) caps=['RECEIVE_COMMANDS', 'HEARTBEAT', 'TELEMETRY', 'SWARM_LEAD']
+  | [2026-07-01T03:55:53.970Z] [REGISTRY ] [INFO   ] [DroneRegistry] registered sd-A-01 role=SCOUT
+  | [2026-07-01T03:55:53.972Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] sl-A-01 started (backup=False)
+  | [sl-A-01] LEADER (ACTIVE) started
+  |   zone     : zone_alpha
+  |   location : 36.80650Â°N 10.18150Â°E
+  |   peers    : ['sl-A-02']
+  |   broker   : mosquitto:1883
+  | [2026-07-01T03:55:53.973Z] [REGISTRY ] [INFO   ] [DroneRegistry] registered fd-A-01 role=FIREFIGHTING
+  | [2026-07-01T03:56:00.099Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] received RESPOND_TO_FIRE trace=03d9a27a
+  | [2026-07-01T03:56:00.100Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK RECEIVED trace=03d9a27a
+  | [2026-07-01T03:56:00.100Z] [COMMANDS ] [INFO   ] [SwarmLeaderNode] executing RESPOND_TO_FIRE
+  | [2026-07-01T03:56:00.120Z] [SYSTEM   ] [INFO   ] [FireTactics] respond_to_fire 598a48c7 sev=HIGH: 1 scouts r=110m | 1 fighters
+  | [2026-07-01T03:56:00.120Z] [COMMANDS ] [INFO   ] [SwarmLeaderNode] â†’ UPDATE_TASK to sd-A-01 trace=3e96281d
+  | [2026-07-01T03:56:00.121Z] [COMMANDS ] [INFO   ] [SwarmLeaderNode] â†’ UPDATE_TASK to fd-A-01 trace=307db803
+  | [2026-07-01T03:56:00.121Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] ACK EXECUTED trace=03d9a27a
+
+  --- sl-A-02 ---
+  | [2026-07-01T03:55:53.969Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] current leader set to sl-A-01 (term=1)
+  | [2026-07-01T03:55:53.969Z] [REGISTRY ] [INFO   ] [DroneRegistry] registered sd-A-01 role=SCOUT
+  | [2026-07-01T03:55:53.969Z] [HEARTBEAT] [INFO   ] [Heartbeat] started (interval=5s)
+  | [2026-07-01T03:55:53.970Z] [REGISTRY ] [INFO   ] [BaseNode] announced sl-A-02 (SWARM_LEADER) caps=['RECEIVE_COMMANDS', 'HEARTBEAT', 'TELEMETRY', 'LEADER_BACKUP'] zone=zone_alpha location=(36.8085, 10.1835)
+  | [2026-07-01T03:55:53.970Z] [SYSTEM   ] [INFO   ] [BaseNode] sl-A-02 started
+  | [2026-07-01T03:55:53.970Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] sl-A-02 ready â€” zone=zone_alpha location=(36.8085, 10.1835) caps=['RECEIVE_COMMANDS', 'HEARTBEAT', 'TELEMETRY', 'LEADER_BACKUP']
+  | [2026-07-01T03:55:53.972Z] [SYSTEM   ] [INFO   ] [SwarmLeaderNode] sl-A-02 started (backup=True)
+  | [sl-A-02] LEADER (BACKUP) started
+  |   zone     : zone_alpha
+  |   location : 36.80850Â°N 10.18350Â°E
+  |   peers    : ['sl-A-01']
+  |   broker   : mosquitto:1883
+  | [2026-07-01T03:55:53.974Z] [REGISTRY ] [INFO   ] [DroneRegistry] registered fd-A-01 role=FIREFIGHTING
+
+  --- sd-A-01 ---
+  | [2026-07-01T03:55:53.960Z] [HEARTBEAT] [INFO   ] [Heartbeat] started (interval=5s)
+  | [2026-07-01T03:55:53.961Z] [REGISTRY ] [INFO   ] [BaseNode] announced sd-A-01 (SCOUT_DRONE) caps=['RECEIVE_COMMANDS', 'HEARTBEAT', 'TELEMETRY', 'SCOUT'] zone=zone_alpha location=[36.807, 10.1825]
+  | [2026-07-01T03:55:53.961Z] [SYSTEM   ] [INFO   ] [BaseNode] sd-A-01 started
+  | [2026-07-01T03:55:53.962Z] [SYSTEM   ] [INFO   ] [ScoutDroneNode] sd-A-01 ready â€” zone=zone_alpha location=[36.807, 10.1825] caps=['RECEIVE_COMMANDS', 'HEARTBEAT', 'TELEMETRY', 'SCOUT']
+  | [2026-07-01T03:55:53.963Z] [SYSTEM   ] [INFO   ] [ScoutDroneNode] sd-A-01 started â€” home=(36.80700,10.18250) leader=sl-A-01
+  | [sd-A-01] SCOUT started
+  |   home     : GPSCoord(36.807000Â°N, 10.182500Â°E, 50.0 m AMSL)
+  |   zone     : zone_alpha
+  |   leader   : sl-A-01
+  |   wind     : 5.0 m/s FROM 225.0Â°T [LIGHT turbulence]
+  |   battery  : 585.9 Wh
+  |   broker   : mosquitto:1883
+  | [2026-07-01T03:56:00.122Z] [SYSTEM   ] [INFO   ] [ScoutDroneNode] received UPDATE_TASK trace=3e96281d
+  | [2026-07-01T03:56:00.122Z] [SYSTEM   ] [INFO   ] [ScoutDroneNode] ACK RECEIVED trace=3e96281d
+  | [2026-07-01T03:56:00.122Z] [COMMANDS ] [INFO   ] [ScoutDroneNode] UPDATE_TASK â†’ SCOUTING
+  | [2026-07-01T03:56:00.123Z] [SYSTEM   ] [INFO   ] [ScoutDroneNode] ACK EXECUTED trace=3e96281d
+
+  --- fd-A-01 ---
+  | [2026-07-01T03:55:53.962Z] [HEARTBEAT] [INFO   ] [Heartbeat] started (interval=5s)
+  | [2026-07-01T03:55:53.963Z] [REGISTRY ] [INFO   ] [BaseNode] announced fd-A-01 (FIREFIGHTING_DRONE) caps=['RECEIVE_COMMANDS', 'HEARTBEAT', 'TELEMETRY', 'FIREFIGHTING'] zone=zone_alpha location=[36.8065, 10.184]
+  | [2026-07-01T03:55:53.963Z] [SYSTEM   ] [INFO   ] [BaseNode] fd-A-01 started
+  | [2026-07-01T03:55:53.964Z] [SYSTEM   ] [INFO   ] [FirefightingDroneNode] fd-A-01 ready â€” zone=zone_alpha location=[36.8065, 10.184] caps=['RECEIVE_COMMANDS', 'HEARTBEAT', 'TELEMETRY', 'FIREFIGHTING']
+  | [2026-07-01T03:55:53.965Z] [SYSTEM   ] [INFO   ] [FirefightingDroneNode] fd-A-01 started â€” home=(36.80650,10.18400) payload=10.0 L leader=sl-A-01
+  | [fd-A-01] FIREFIGHTER started
+  |   home     : GPSCoord(36.806500Â°N, 10.184000Â°E, 50.0 m AMSL)
+  |   zone     : zone_alpha
+  |   leader   : sl-A-01
+  |   payload  : 10.0 L water
+  |   battery  : 585.9 Wh
+  |   wind     : 5.0 m/s FROM 225.0Â°T [LIGHT turbulence]
+  |   broker   : mosquitto:1883
+  | [2026-07-01T03:56:00.122Z] [SYSTEM   ] [INFO   ] [FirefightingDroneNode] received UPDATE_TASK trace=307db803
+  | [2026-07-01T03:56:00.123Z] [SYSTEM   ] [INFO   ] [FirefightingDroneNode] ACK RECEIVED trace=307db803
+  | [2026-07-01T03:56:00.123Z] [COMMANDS ] [INFO   ] [FirefightingDroneNode] UPDATE_TASK â†’ SUPPRESSING
+  | [2026-07-01T03:56:00.123Z] [SYSTEM   ] [INFO   ] [FirefightingDroneNode] ACK EXECUTED trace=307db803
+
+  --- wfc-dashboard ---
+  | INFO:     Started server process [1]
+  | INFO:     Waiting for application startup.
+  | INFO:     Started server process [1]
+  | INFO:     Waiting for application startup.
+  | INFO:     Application startup complete.
+  | INFO:     Application startup complete.
+  | INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+  | INFO:     Uvicorn running on http://0.0.0.0:8081 (Press CTRL+C to quit)
+
+  --- wfc-test-orchestrator ---
+  | INFO:     172.18.0.1:49010 - "GET /api/scenarios HTTP/1.1" 200 OK
+  | INFO:     172.18.0.1:49026 - "POST /api/runs/start HTTP/1.1" 200 OK
+  | INFO:     172.18.0.1:49036 - "GET /api/runs/7d2be836 HTTP/1.1" 200 OK
+  | INFO:     172.18.0.1:49038 - "GET /api/runs/7d2be836 HTTP/1.1" 200 OK
+  | INFO:     172.18.0.1:49050 - "GET /api/transcript?limit=500 HTTP/1.1" 200 OK
+  | INFO:     Started server process [1]
+  | INFO:     Waiting for application startup.
+  | INFO:     Application startup complete.
+  | INFO:     Uvicorn running on http://0.0.0.0:9090 (Press CTRL+C to quit)
+
+------------------------------------------------------------
+  RUN CONTEXT
+------------------------------------------------------------
+{
+  "fire_id": "598a48c7",
+  "trigger_ts": 1782878159.1636758,
+  "trace_id_a": "03d9a27a-2a22-5cfd-b140-cf16a7c86fee",
+  "drone_id": "sd-A-01",
+  "drone_trace_id": "3e96281d-bc06-4c9b-9898-af5fb80a428f"
+}
+
+================================================================================

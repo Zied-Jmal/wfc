@@ -1,0 +1,80 @@
+[2026-07-02T02:09:21.737Z] [RULES    ] [INFO   ] [RuleEngine] [fire_contained] skipped | fire_id=demo-fir state=ACTIVE reason=fire_state_is_ACTIVE_not_contained
+[2026-07-02T02:09:21.737Z] [RULES    ] [INFO   ] [RuleEngine] [fire_suppressed] skipped | fire_id=demo-fir state=ACTIVE reason=fire_state_is_ACTIVE_not_suppressed
+[2026-07-02T02:09:21.737Z] [RULES    ] [INFO   ] [RuleEngine] [elected_leader] skipped | fire_id=demo-fir state=ACTIVE reason=no_election_metadata
+[2026-07-02T02:09:21.737Z] [RULES    ] [INFO   ] [RuleEngine] [severity_increase] skipped | fire_id=demo-fir state=ACTIVE reason=not_intensity_trigger
+[2026-07-02T02:09:21.738Z] [RULES    ] [INFO   ] [RuleEngine] [fire_expansion] skipped | fire_id=demo-fir state=ACTIVE reason=not_telemetry_trigger
+[2026-07-02T02:09:21.738Z] [RULES    ] [INFO   ] [RuleEngine] [rekindle_detection] skipped | fire_id=demo-fir state=ACTIVE reason=not_rekindled_trigger
+[2026-07-02T02:09:21.738Z] [RULES    ] [INFO   ] [RuleEngine] [containment_failure] skipped | fire_id=demo-fir state=ACTIVE reason=not_contained
+[2026-07-02T02:09:21.738Z] [RULES    ] [INFO   ] [RuleEngine] [fire_verification] skipped | fire_id=demo-fir state=ACTIVE reason=not_new_fire
+[2026-07-02T02:09:21.738Z] [RULES    ] [INFO   ] [RuleEngine] [leader_lost] skipped | fire_id=demo-fir state=ACTIVE reason=election_already_resolved
+[2026-07-02T02:09:21.738Z] [RULES    ] [INFO   ] [RuleEngine] [swarm_attrition] skipped | fire_id=demo-fir state=ACTIVE reason=not_telemetry
+[2026-07-02T02:09:21.738Z] [RULES    ] [INFO   ] [RuleEngine] [resource_exhaustion] skipped | fire_id=demo-fir state=ACTIVE reason=not_telemetry
+[2026-07-02T02:09:21.738Z] [RULES    ] [INFO   ] [RuleEngine] [priority] skipped | fire_id=demo-fir state=ACTIVE reason=not_new_fire
+[2026-07-02T02:09:21.738Z] [STATE    ] [INFO   ] [MissionStore] INVALID mission transition RUNNINGÔåÆASSIGNED for 4cdf1c31
+[2026-07-02T02:09:21.738Z] [SYSTEM   ] [INFO   ] [CommanderCore] mission 4cdf1c31 ÔåÆ ASSIGNED after redispatch to sl-A-01
+[2026-07-02T02:09:21.738Z] [SYSTEM   ] [INFO   ] [CommanderCore] re-dispatched fire=demo-fir after leader central-commander offline
+[2026-07-02T02:09:23.102Z] [BUS      ] [VERBOSE] [CommanderCore] unhandled topic: wfc/telemetry/fd-A-01 (active=True)
+[2026-07-02T02:09:23.149Z] [BUS      ] [VERBOSE] [CommanderCore] unhandled topic: wfc/telemetry/sd-A-01 (active=True)
+[2026-07-02T02:09:23.558Z] [HEARTBEAT] [TRACE  ] [HeartbeatMonitor] heartbeat from sd-A-01
+[2026-07-02T02:09:23.558Z] [BUS      ] [VERBOSE] [CommanderCore] unhandled topic: wfc/nodes/sd-A-01/heartbeat (active=True)
+[2026-07-02T02:09:23.564Z] [HEARTBEAT] [TRACE  ] [HeartbeatMonitor] heartbeat from fd-A-01
+[2026-07-02T02:09:23.565Z] [BUS      ] [VERBOSE] [CommanderCore] unhandled topic: wfc/nodes/fd-A-01/heartbeat (active=True)
+[2026-07-02T02:09:23.631Z] [HEARTBEAT] [TRACE  ] [HeartbeatMonitor] heartbeat from sl-A-02
+[2026-07-02T02:09:23.631Z] [BUS      ] [VERBOSE] [CommanderCore] unhandled topic: wfc/nodes/sl-A-02/heartbeat (active=True)
+[2026-07-02T02:09:23.728Z] [HEARTBEAT] [TRACE  ] [HeartbeatMonitor] heartbeat from sl-A-01
+[2026-07-02T02:09:23.728Z] [BUS      ] [VERBOSE] [CommanderCore] unhandled topic: wfc/nodes/sl-A-01/heartbeat (active=True)
+[2026-07-02T02:09:24.294Z] [HEARTBEAT] [TRACE  ] [HeartbeatMonitor] heartbeat from central-commander
+[2026-07-02T02:09:24.294Z] [BUS      ] [VERBOSE] [CommanderCore] unhandled topic: wfc/nodes/central-commander/heartbeat (active=True)
+[2026-07-02T02:09:25.045Z] [BUS      ] [VERBOSE] [CommanderCore] unhandled topic: wfc/command/fd-A-01 (active=True)
+[2026-07-02T02:09:25.046Z] [TRACKER  ] [INFO   ] [CommandTracker] unknown trace_id=9b5762e4-6185-4790-b36a-8494d9ce5db4 ÔÇö dropped
+[2026-07-02T02:09:25.047Z] [TRACKER  ] [INFO   ] [CommanderCore] ACK trace=9b5762e4 status=RECEIVED from=fd-A-01 accepted=False
+[2026-07-02T02:09:25.047Z] [TRACKER  ] [INFO   ] [CommandTracker] unknown trace_id=9b5762e4-6185-4790-b36a-8494d9ce5db4 ÔÇö dropped
+[2026-07-02T02:09:25.047Z] [TRACKER  ] [INFO   ] [CommanderCore] ACK trace=9b5762e4 status=EXECUTED from=fd-A-01 accepted=False
+[2026-07-02T02:09:25.102Z] [BUS      ] [VERBOSE] [CommanderCore] unhandled topic: wfc/telemetry/fd-A-01 (active=True)
+[2026-07-02T02:09:25.149Z] [BUS      ] [VERBOSE] [CommanderCore] unhandled topic: wfc/telemetry/sd-A-01 (active=True)
+[2026-07-02T02:09:25.155Z] [HEARTBEAT] [TRACE  ] [HeartbeatMonitor] heartbeat from backup-commander
+[2026-07-02T02:09:25.155Z] [BUS      ] [VERBOSE] [CommanderCore] unhandled topic: wfc/nodes/backup-commander/heartbeat (active=True)
+[2026-07-02T02:09:26.736Z] [TRACKER  ] [INFO   ] [CommanderCore] ACK timeout trace=5f1310f1 node=central-commander fire=demo-fir ÔÇö treating as failed, releasing node
+[2026-07-02T02:09:26.736Z] [TRACKER  ] [INFO   ] [CommandTracker] missing event_id for 5f1310f1-7204-421d-9b60-9cfe0940c410
+[2026-07-02T02:09:26.736Z] [REGISTRY ] [INFO   ] [NodeRegistry] job released: central-commander
+[2026-07-02T02:09:26.766Z] [STATE    ] [INFO   ] [FireStateStore] fire demo-fir: assigned_nodes ['sl-A-01'] ÔåÆ [] reason=leader_central-commander_offline
+[2026-07-02T02:09:26.766Z] [RULES    ] [INFO   ] [RuleEngine] evaluating fire_id=demo-fir state=ACTIVE severity=LOW trigger=EvalTrigger.MANUAL
+[2026-07-02T02:09:26.766Z] [RULES    ] [INFO   ] [FireDispatchRule] no target found
+[2026-07-02T02:09:26.766Z] [RULES    ] [INFO   ] [RuleEngine] [fire_dispatch] skipped | fire_id=demo-fir state=ACTIVE reason=no_available_swarm_leaders
+[2026-07-02T02:09:26.767Z] [RULES    ] [INFO   ] [RuleEngine] [high_severity] skipped | fire_id=demo-fir state=ACTIVE reason=severity_is_low_not_high
+[2026-07-02T02:09:26.767Z] [RULES    ] [INFO   ] [RuleEngine] [no_responders] TRIGGERED | fire_id=demo-fir state=ACTIVE reason=no_swarm_leaders_available ÔÇö escalating
+[2026-07-02T02:09:26.767Z] [RULES    ] [INFO   ] [RuleEngine] [no_responders] ESCALATION_REQUESTED already logged for fire=demo-fir ÔÇö skipping duplicate
+[2026-07-02T02:09:26.767Z] [RULES    ] [INFO   ] [RuleEngine] [no_responders] ESCALATION_REQUESTED already logged for fire=demo-fir ÔÇö skipping duplicate
+[2026-07-02T02:09:26.767Z] [RULES    ] [INFO   ] [RuleEngine] [fire_contained] skipped | fire_id=demo-fir state=ACTIVE reason=fire_state_is_ACTIVE_not_contained
+[2026-07-02T02:09:26.768Z] [RULES    ] [INFO   ] [RuleEngine] [fire_suppressed] skipped | fire_id=demo-fir state=ACTIVE reason=fire_state_is_ACTIVE_not_suppressed
+[2026-07-02T02:09:26.768Z] [RULES    ] [INFO   ] [RuleEngine] [elected_leader] skipped | fire_id=demo-fir state=ACTIVE reason=no_election_metadata
+[2026-07-02T02:09:26.768Z] [RULES    ] [INFO   ] [RuleEngine] [severity_increase] skipped | fire_id=demo-fir state=ACTIVE reason=not_intensity_trigger
+[2026-07-02T02:09:26.768Z] [RULES    ] [INFO   ] [RuleEngine] [fire_expansion] skipped | fire_id=demo-fir state=ACTIVE reason=not_telemetry_trigger
+[2026-07-02T02:09:26.768Z] [RULES    ] [INFO   ] [RuleEngine] [rekindle_detection] skipped | fire_id=demo-fir state=ACTIVE reason=not_rekindled_trigger
+[2026-07-02T02:09:26.768Z] [RULES    ] [INFO   ] [RuleEngine] [containment_failure] skipped | fire_id=demo-fir state=ACTIVE reason=not_contained
+[2026-07-02T02:09:26.768Z] [RULES    ] [INFO   ] [RuleEngine] [fire_verification] skipped | fire_id=demo-fir state=ACTIVE reason=not_new_fire
+[2026-07-02T02:09:26.769Z] [RULES    ] [INFO   ] [RuleEngine] [leader_lost] skipped | fire_id=demo-fir state=ACTIVE reason=all_leaders_alive
+[2026-07-02T02:09:26.769Z] [RULES    ] [INFO   ] [RuleEngine] [swarm_attrition] skipped | fire_id=demo-fir state=ACTIVE reason=not_telemetry
+[2026-07-02T02:09:26.769Z] [RULES    ] [INFO   ] [RuleEngine] [resource_exhaustion] skipped | fire_id=demo-fir state=ACTIVE reason=not_telemetry
+[2026-07-02T02:09:26.769Z] [RULES    ] [INFO   ] [RuleEngine] [priority] skipped | fire_id=demo-fir state=ACTIVE reason=not_new_fire
+[2026-07-02T02:09:26.769Z] [SYSTEM   ] [INFO   ] [CommanderCore] fire demo-fir re-activated by ContainmentFailureRule ÔÇö running second dispatch pass
+[2026-07-02T02:09:26.769Z] [RULES    ] [INFO   ] [RuleEngine] evaluating fire_id=demo-fir state=ACTIVE severity=LOW trigger=EvalTrigger.REDISPATCH
+[2026-07-02T02:09:26.769Z] [RULES    ] [INFO   ] [FireDispatchRule] no target found
+[2026-07-02T02:09:26.769Z] [RULES    ] [INFO   ] [RuleEngine] [fire_dispatch] skipped | fire_id=demo-fir state=ACTIVE reason=no_available_swarm_leaders
+[2026-07-02T02:09:26.769Z] [RULES    ] [INFO   ] [RuleEngine] [high_severity] skipped | fire_id=demo-fir state=ACTIVE reason=severity_is_low_not_high
+[2026-07-02T02:09:26.770Z] [RULES    ] [INFO   ] [RuleEngine] [no_responders] TRIGGERED | fire_id=demo-fir state=ACTIVE reason=no_swarm_leaders_available ÔÇö escalating
+[2026-07-02T02:09:26.770Z] [RULES    ] [INFO   ] [RuleEngine] [no_responders] ESCALATION_REQUESTED already logged for fire=demo-fir ÔÇö skipping duplicate
+[2026-07-02T02:09:26.770Z] [RULES    ] [INFO   ] [RuleEngine] [no_responders] ESCALATION_REQUESTED already logged for fire=demo-fir ÔÇö skipping duplicate
+[2026-07-02T02:09:26.770Z] [RULES    ] [INFO   ] [RuleEngine] [fire_contained] skipped | fire_id=demo-fir state=ACTIVE reason=fire_state_is_ACTIVE_not_contained
+[2026-07-02T02:09:26.770Z] [RULES    ] [INFO   ] [RuleEngine] [fire_suppressed] skipped | fire_id=demo-fir state=ACTIVE reason=fire_state_is_ACTIVE_not_suppressed
+[2026-07-02T02:09:26.770Z] [RULES    ] [INFO   ] [RuleEngine] [elected_leader] skipped | fire_id=demo-fir state=ACTIVE reason=no_election_metadata
+[2026-07-02T02:09:26.770Z] [RULES    ] [INFO   ] [RuleEngine] [severity_increase] skipped | fire_id=demo-fir state=ACTIVE reason=not_intensity_trigger
+[2026-07-02T02:09:26.770Z] [RULES    ] [INFO   ] [RuleEngine] [fire_expansion] skipped | fire_id=demo-fir state=ACTIVE reason=not_telemetry_trigger
+[2026-07-02T02:09:26.770Z] [RULES    ] [INFO   ] [RuleEngine] [rekindle_detection] skipped | fire_id=demo-fir state=ACTIVE reason=not_rekindled_trigger
+[2026-07-02T02:09:26.770Z] [RULES    ] [INFO   ] [RuleEngine] [containment_failure] skipped | fire_id=demo-fir state=ACTIVE reason=not_contained
+[2026-07-02T02:09:26.771Z] [RULES    ] [INFO   ] [RuleEngine] [fire_verification] skipped | fire_id=demo-fir state=ACTIVE reason=not_new_fire
+[2026-07-02T02:09:26.771Z] [RULES    ] [INFO   ] [RuleEngine] [leader_lost] skipped | fire_id=demo-fir state=ACTIVE reason=all_leaders_alive
+[2026-07-02T02:09:26.771Z] [RULES    ] [INFO   ] [RuleEngine] [swarm_attrition] skipped | fire_id=demo-fir state=ACTIVE reason=not_telemetry
+[2026-07-02T02:09:26.771Z] [RULES    ] [INFO   ] [RuleEngine] [resource_exhaustion] skipped | fire_id=demo-fir state=ACTIVE reason=not_telemetry
+[2026-07-02T02:09:26.771Z] [RULES    ] [INFO   ] [RuleEngine] [priority] skipped | fire_id=demo-fir state=ACTIVE reason=not_new_fire
+[2026-07-02T02:09:26.771Z] [SYSTEM   ] [INFO   ] [CommanderCore] re-dispatched fire=demo-fir after leader central-commander offline
