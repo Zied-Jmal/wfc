@@ -41,6 +41,6 @@ jobs:
           context: .
           file: ${{ matrix.dockerfile }}
           push: true
-          tags: ghcr.io/${{ github.repository }}/${{ matrix.image }}:${{ github.ref_name }}
+          tags: ghcr.io/${{ toLower(github.repository) }}/${{ matrix.image }}:${{ github.ref_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
