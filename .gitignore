@@ -34,8 +34,19 @@ Thumbs.db
 
 # Docker
 docker-compose.override.yml
+.env.docker
+.env.docker.reference
 
 # Test
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Logs
+*.log
+
+# Test reports (runtime operational data — not meant for public sharing)
+test_reports/
+
+# Runtime data
+Commander_Repo/data/
