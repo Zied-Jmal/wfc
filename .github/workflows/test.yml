@@ -47,5 +47,7 @@ jobs:
       - run: pip install -e wfc_shared
       - run: pip install -r ${{ matrix.repo }}/requirements-dev.txt
         if: matrix.repo != 'wfc_shared'
+      - run: pip install pytest pytest-timeout
+        if: matrix.repo == 'wfc_shared'
       - run: pip install -e ${{ matrix.repo }}
       - run: pytest ${{ matrix.repo }}/tests/unit -v --timeout=30
