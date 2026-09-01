@@ -51,3 +51,6 @@ jobs:
         if: matrix.repo == 'wfc_shared'
       - run: pip install -e ${{ matrix.repo }}
       - run: pytest ${{ matrix.repo }}/tests/unit -v --timeout=30
+        if: matrix.repo != 'wfc_shared'
+      - run: pytest wfc_shared/tests -v --timeout=30
+        if: matrix.repo == 'wfc_shared'
