@@ -30,6 +30,8 @@ jobs:
       - run: pip install -r Swarm_Repo/requirements-dev.txt
       - run: pip install -r Commander_Repo/requirements-dev.txt
       - run: pip install -r Dashboard_Repo/requirements-dev.txt
+      - run: pip install -r Integration_Tests/requirements-dev.txt
+      - run: pip install requests
       - run: pyright
 
   test-unit:
@@ -44,5 +46,6 @@ jobs:
           python-version: "3.14"
       - run: pip install -e wfc_shared
       - run: pip install -r ${{ matrix.repo }}/requirements-dev.txt
+        if: matrix.repo != 'wfc_shared'
       - run: pip install -e ${{ matrix.repo }}
       - run: pytest ${{ matrix.repo }}/tests/unit -v --timeout=30
