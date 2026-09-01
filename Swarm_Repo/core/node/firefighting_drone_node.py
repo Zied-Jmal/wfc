@@ -21,18 +21,19 @@ import threading
 import time
 from typing import Any
 
-from core.node.field_node import FieldNode
-from core.utils.logger import log
-
 # Physical engine (action layer V2)
 from action.gps import GPSCoord
-from action.wind import WindModel
-from action.suppression import SuppressionActionEngine, SuppressionState
 from action.resources import (
-    DroneResourceModel, BATTERY_CAPACITY_WH, TANK_CAPACITY_L,
+    BATTERY_CAPACITY_WH,
+    TANK_CAPACITY_L,
+    DroneResourceModel,
 )
+from action.suppression import SuppressionActionEngine, SuppressionState
+from action.wind import WindModel
 
-from wfc_shared.enums.capabilities import FIREFIGHTING, RECEIVE_COMMANDS, HEARTBEAT, TELEMETRY
+from core.node.field_node import FieldNode
+from core.utils.logger import log
+from wfc_shared.enums.capabilities import FIREFIGHTING, HEARTBEAT, RECEIVE_COMMANDS, TELEMETRY
 from wfc_shared.enums.command_types import DISPATCH_DRONE, RECALL_DRONE, UPDATE_TASK
 from wfc_shared.enums.node_types import FIREFIGHTING_DRONE
 from wfc_shared.enums.topics import telemetry_topic
@@ -60,14 +61,14 @@ class FirefightingDroneNode(FieldNode):
 
     def __init__(
         self,
-        node_id:         str,
-        zone:            str,
-        home_gps:        GPSCoord,
-        leader_id:       str,
-        wind:            WindModel | None = None,
-        initial_battery_wh:  float = BATTERY_CAPACITY_WH,
-        initial_payload_l:   float = TANK_CAPACITY_L,
-        payload_type:        str   = "water",   # "water" | "retardant"
+        node_id: str,
+        zone: str,
+        home_gps: GPSCoord,
+        leader_id: str,
+        wind: WindModel | None = None,
+        initial_battery_wh: float = BATTERY_CAPACITY_WH,
+        initial_payload_l: float = TANK_CAPACITY_L,
+        payload_type: str = "water",  # "water" | "retardant"
     ) -> None:
         super().__init__(
             node_id=node_id,
@@ -76,10 +77,10 @@ class FirefightingDroneNode(FieldNode):
             zone=zone,
             location=[home_gps.lat_deg, home_gps.lon_deg],
         )
-        self._leader_id   = leader_id
-        self._home_gps    = home_gps
-        self._task        = "IDLE"
-        self._running     = False
+        self._leader_id = leader_id
+        self._home_gps = home_gps
+        self._task = "IDLE"
+        self._running = False
         self._telem_thread: threading.Thread | None = None
 
         # Wind (shared with scouts in same zone)
@@ -116,15 +117,15 @@ class FirefightingDroneNode(FieldNode):
         """
         super().start()
         self._running = True
-        self._telem_thread = threading.Thread(
-            target=self._telemetry_loop, daemon=True, name=f"telem-{self.node_id}"
-        )
+        self._telem_thread = threading.Thread(target=self._telemetry_loop, daemon=True, name=f"telem-{self.node_id}")
         self._telem_thread.start()
-        log("FirefightingDroneNode",
+        log(
+            "FirefightingDroneNode",
             f"{self.node_id} started - home=({self._home_gps.lat_deg:.5f},"
             f"{self._home_gps.lon_deg:.5f}) payload={self._resources.payload_litres:.1f} L"
             f" leader={self._leader_id}",
-            channel="SYSTEM")
+            channel="SYSTEM",
+        )
 
     def stop(self) -> None:
         """Stop the firefighting drone and shut down movement engine."""
@@ -136,7 +137,7 @@ class FirefightingDroneNode(FieldNode):
 
     def _on_registry_announce(self, payload: dict[str, Any]) -> None:
         node_id = payload.get("node_id", "")
-        caps    = payload.get("capabilities", [])
+        caps = payload.get("capabilities", [])
         if "SWARM_LEAD" in caps and node_id != self._leader_id:
             old = self._leader_id
             self._leader_id = node_id
@@ -154,10 +155,12 @@ class FirefightingDroneNode(FieldNode):
                 fire_gps = GPSCoord(target[0], target[1], self._home_gps.alt_m)
                 self._task = "SUPPRESSING"
                 self._action.dispatch_to(fire_gps, severity=severity, fire_area_m2=area_m2)
-                log("FirefightingDroneNode",
+                log(
+                    "FirefightingDroneNode",
                     f"DISPATCH SUPPRESSING fire=({target[0]:.5f},{target[1]:.5f})"
                     f" sev={severity} payload={self._resources.payload_litres:.1f} L",
-                    channel="COMMANDS")
+                    channel="COMMANDS",
+                )
         elif command_type == RECALL_DRONE:
             self._task = "RETURNING"
             self._action.recall()
@@ -174,14 +177,13 @@ class FirefightingDroneNode(FieldNode):
                 self._action.recall()
             log("FirefightingDroneNode", f"UPDATE_TASK {new_task}", channel="COMMANDS")
         else:
-            log("FirefightingDroneNode",
-                f"unknown command: {command_type}", channel="COMMANDS")
+            log("FirefightingDroneNode", f"unknown command: {command_type}", channel="COMMANDS")
 
     # TELEMETRY LOOP (every 2s)
 
     def _telemetry_loop(self) -> None:
         """Background telemetry publish loop (every 2s)."""
-        DT = 2.0   # s
+        DT = 2.0  # s
         while self._running:
             time.sleep(DT)
             try:
@@ -190,12 +192,12 @@ class FirefightingDroneNode(FieldNode):
 
                 # Sync task from engine state
                 state_map = {
-                    SuppressionState.IDLE:       "IDLE",
+                    SuppressionState.IDLE: "IDLE",
                     SuppressionState.TRANSITING: "SUPPRESSING",
-                    SuppressionState.APPROACH:   "SUPPRESSING",
-                    SuppressionState.DROPPING:   "SUPPRESSING",
-                    SuppressionState.EGRESS:     "RETURNING",
-                    SuppressionState.RETURNING:  "RETURNING",
+                    SuppressionState.APPROACH: "SUPPRESSING",
+                    SuppressionState.DROPPING: "SUPPRESSING",
+                    SuppressionState.EGRESS: "RETURNING",
+                    SuppressionState.RETURNING: "RETURNING",
                 }
                 self._task = state_map.get(self._action.state, self._task)
 
@@ -203,9 +205,11 @@ class FirefightingDroneNode(FieldNode):
                 if self._resources.should_return_to_base and self._task not in ("RETURNING", "IDLE"):
                     self._task = "RETURNING"
                     self._action.recall()
-                    log("FirefightingDroneNode",
+                    log(
+                        "FirefightingDroneNode",
                         f"{self.node_id} LOW BATTERY ({self._resources.battery_wh:.1f} Wh) → RTB",
-                        channel="SYSTEM")
+                        channel="SYSTEM",
+                    )
 
                 telem = self._build_telemetry()
                 self.mqtt.publish(
@@ -220,11 +224,13 @@ class FirefightingDroneNode(FieldNode):
 
     def _build_telemetry(self) -> DroneTelemetry:
         """Build a DroneTelemetry payload from current position and resource state."""
-        pos = self._action.position_gps   # WGS-84, with GPS noise
+        pos = self._action.position_gps  # WGS-84, with GPS noise
 
         dist_to_gcs = _haversine_approx_m(
-            self._home_gps.lat_deg, self._home_gps.lon_deg,
-            pos.lat_deg, pos.lon_deg,
+            self._home_gps.lat_deg,
+            self._home_gps.lon_deg,
+            pos.lat_deg,
+            pos.lon_deg,
         )
         conn = self._resources.connectivity(dist_to_gcs)
 
@@ -232,33 +238,32 @@ class FirefightingDroneNode(FieldNode):
             drone_id=self.node_id,
             leader_id=self._leader_id,
             timestamp=time.time(),
-
             # ISO position
-            position=(pos.lat_deg, pos.lon_deg),             # WGS-84 decimal degrees
-            altitude_m_amsl=self._action.altitude_m_amsl,   # m AMSL
-
+            position=(pos.lat_deg, pos.lon_deg),  # WGS-84 decimal degrees
+            altitude_m_amsl=self._action.altitude_m_amsl,  # m AMSL
             # ISO resource values
-            battery_wh=self._resources.battery_wh,          # Wh
-            battery_pct=self._resources.battery_pct,        # 0.0-1.0
+            battery_wh=self._resources.battery_wh,  # Wh
+            battery_pct=self._resources.battery_pct,  # 0.0-1.0
             payload_litres=self._resources.payload_litres,  # L
-            payload_kg=self._resources.payload_kg,          # kg
+            payload_kg=self._resources.payload_kg,  # kg
             task=self._task,  # pyright: ignore[reportArgumentType]
             connectivity=conn,  # pyright: ignore[reportArgumentType]
-
             # Suppression metrics
-            litres_delivered=self._action.litres_delivered,             # L total
+            litres_delivered=self._action.litres_delivered,  # L total
             suppression_effectiveness_pct=self._action.suppression_effectiveness_pct,  # 0.0-1.0
-            drop_passes=self._action.drop_passes,                       # int
-            pump_active=self._action.pump_active,                       # bool
-
+            drop_passes=self._action.drop_passes,  # int
+            pump_active=self._action.pump_active,  # bool
             # Firefighters carry no scouting sensors
         )
 
 
 def _haversine_approx_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     import math
-    R  = 6_371_000.0
-    p1 = math.radians(lat1); p2 = math.radians(lat2)
-    dp = p2 - p1; dl = math.radians(lon2 - lon1)
-    a  = math.sin(dp/2)**2 + math.cos(p1)*math.cos(p2)*math.sin(dl/2)**2
+
+    R = 6_371_000.0
+    p1 = math.radians(lat1)
+    p2 = math.radians(lat2)
+    dp = p2 - p1
+    dl = math.radians(lon2 - lon1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
     return 2 * R * math.asin(math.sqrt(a))

@@ -5,12 +5,12 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from wfc_shared.enums.fire_status import IGNITED, FIRE_TRANSITIONS, TERMINAL_FIRE_STATES
 from core.persistence.database import Database
 from core.utils.logger import log
-
+from wfc_shared.enums.fire_status import FIRE_TRANSITIONS, IGNITED, TERMINAL_FIRE_STATES
 
 # region  SCHEMA - FireRecord
+
 
 class FireRecord(BaseModel):
     """Single source of truth for one fire event.
@@ -22,27 +22,27 @@ class FireRecord(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    fire_id:         str
-    state:           str
-    zone:            str
-    severity:        str
-    sensor_id:       str
-    location_coords: (tuple[float, float] | None) = None
+    fire_id: str
+    state: str
+    zone: str
+    severity: str
+    sensor_id: str
+    location_coords: tuple[float, float] | None = None
 
-# single node list of nodes
+    # single node list of nodes
     assigned_nodes: list[str] = Field(default_factory=list)
 
     # bully election term tracking
     leader_term: int = 0
 
-    mission_id:      (str | None)                 = None
-    created_at:      float                         = Field(default_factory=time.time)
-    updated_at:      float                         = Field(default_factory=time.time)
-    history:         tuple[dict[str, Any], ...]              = Field(default_factory=tuple)
+    mission_id: str | None = None
+    created_at: float = Field(default_factory=time.time)
+    updated_at: float = Field(default_factory=time.time)
+    history: tuple[dict[str, Any], ...] = Field(default_factory=tuple)
 
     # BRIDGE: @property assigned_node (backward-compatible)
     @property
-    def assigned_node(self) -> (str | None):
+    def assigned_node(self) -> str | None:
         """Backward-compatible bridge: returns first node in list, or None."""
         return self.assigned_nodes[0] if self.assigned_nodes else None
 
@@ -66,9 +66,11 @@ class FireRecord(BaseModel):
             "updated_at": self.updated_at,
         }
 
+
 # endregion
 
 # endregion
+
 
 # region CLASS - FireStateStore
 class FireStateStore:
@@ -89,13 +91,12 @@ class FireStateStore:
         self._repo = None
         if db is not None:
             from core.persistence.repositories.fire_state_repo import FireStateRepository
+
             self._repo = FireStateRepository(db)
             for rec in self._repo.get_all():
                 self._fires[rec.fire_id] = rec
             if self._fires:
-                log("FireStateStore",
-                    f"hydrated {len(self._fires)} fire(s) from database",
-                    channel="STATE")
+                log("FireStateStore", f"hydrated {len(self._fires)} fire(s) from database", channel="STATE")
 
     # region PUBLIC API
     def ignite(
@@ -119,9 +120,11 @@ class FireStateStore:
             The FireRecord (newly created or existing).
         """
         if fire_id in self._fires:
-            log("FireStateStore",
+            log(
+                "FireStateStore",
                 f"ignite() called for existing fire {fire_id[:8]} - returning current state",
-                channel="STATE")
+                channel="STATE",
+            )
             return self._fires[fire_id]
         rec = FireRecord(
             fire_id=fire_id,
@@ -135,9 +138,7 @@ class FireStateStore:
         self._fires[fire_id] = rec
         if self._repo is not None:
             self._repo.upsert(rec)
-        log("FireStateStore",
-            f"fire IGNITED: {fire_id[:8]} zone={zone} severity={severity}",
-            channel="STATE")
+        log("FireStateStore", f"fire IGNITED: {fire_id[:8]} zone={zone} severity={severity}", channel="STATE")
         return rec
 
     def transition(
@@ -147,7 +148,7 @@ class FireStateStore:
         reason: str = "",
         assigned_node: (str | None) = None,
         mission_id: (str | None) = None,
-    ) -> (FireRecord | None):
+    ) -> FireRecord | None:
         """Transition a fire to a new state if the move is valid.
 
         Args:
@@ -163,29 +164,24 @@ class FireStateStore:
         """
         rec = self._fires.get(fire_id)
         if rec is None:
-            log("FireStateStore",
-                f"transition() for unknown fire {fire_id[:8]}",
-                channel="STATE")
+            log("FireStateStore", f"transition() for unknown fire {fire_id[:8]}", channel="STATE")
             return None
         if rec.is_terminal():
-            log("FireStateStore",
-                f"fire {fire_id[:8]} is terminal ({rec.state}) - transition rejected",
-                channel="STATE")
+            log(
+                "FireStateStore", f"fire {fire_id[:8]} is terminal ({rec.state}) - transition rejected", channel="STATE"
+            )
             return rec
-        allowed = FIRE_TRANSITIONS.get(rec.state, set()) # pyright: ignore[reportUnknownArgumentType, reportUnknownVariableType]
+        allowed = FIRE_TRANSITIONS.get(rec.state, set())  # pyright: ignore[reportUnknownArgumentType, reportUnknownVariableType]
         if new_state not in allowed:
-            log("FireStateStore",
-                f"INVALID fire transition {rec.state}{new_state} for {fire_id[:8]}",
-                channel="STATE")
+            log("FireStateStore", f"INVALID fire transition {rec.state}{new_state} for {fire_id[:8]}", channel="STATE")
             return None
         old_state = rec.state
         now = time.time()
-        new_history = rec.history + (self._make_history_entry(new_state, reason),)
+        new_history = (*rec.history, self._make_history_entry(new_state, reason))
         # assigned_node updates go into assigned_nodes list
         new_nodes = list(rec.assigned_nodes)
-        if assigned_node is not None:
-            if assigned_node not in new_nodes:
-                new_nodes.append(assigned_node)
+        if assigned_node is not None and assigned_node not in new_nodes:
+            new_nodes.append(assigned_node)
             # If assigned_node is None, we keep the current list (do NOT clear)
         updates: dict[str, Any] = {
             "state": new_state,
@@ -199,9 +195,7 @@ class FireStateStore:
         self._fires[fire_id] = rec
         if self._repo is not None:
             self._repo.upsert(rec)
-        log("FireStateStore",
-            f"fire {fire_id[:8]}: {old_state} {new_state} reason={reason}",
-            channel="STATE")
+        log("FireStateStore", f"fire {fire_id[:8]}: {old_state} {new_state} reason={reason}", channel="STATE")
         return rec
 
     def assign_node(
@@ -209,15 +203,13 @@ class FireStateStore:
         fire_id: str,
         assigned_node: (str | None),
         reason: str = "",
-    ) -> (FireRecord | None):
+    ) -> FireRecord | None:
         """Updates assigned_nodes list. If assigned_node is provided,
         append it if not already present. If assigned_node is None, clear the list.
         """
         rec = self._fires.get(fire_id)
         if rec is None:
-            log("FireStateStore",
-                f"assign_node() for unknown fire {fire_id[:8]}",
-                channel="STATE")
+            log("FireStateStore", f"assign_node() for unknown fire {fire_id[:8]}", channel="STATE")
             return None
 
         old_nodes = rec.assigned_nodes
@@ -229,27 +221,31 @@ class FireStateStore:
             if assigned_node not in new_nodes:
                 new_nodes.append(assigned_node)
 
-        new_history = rec.history + (self._make_history_entry(rec.state, reason or "assigned_node_changed"),)
-        rec = rec.model_copy(update={
-            "assigned_nodes": new_nodes,
-            "updated_at":     time.time(),
-            "history":        new_history,
-        })
+        new_history = (*rec.history, self._make_history_entry(rec.state, reason or "assigned_node_changed"))
+        rec = rec.model_copy(
+            update={
+                "assigned_nodes": new_nodes,
+                "updated_at": time.time(),
+                "history": new_history,
+            }
+        )
         self._fires[fire_id] = rec
 
         if self._repo is not None:
             self._repo.upsert(rec)
 
-        log("FireStateStore",
+        log(
+            "FireStateStore",
             f"fire {fire_id[:8]}: assigned_nodes {old_nodes} → {new_nodes} reason={reason}",
-            channel="STATE")
+            channel="STATE",
+        )
         return rec
 
-    def add_assigned_node(self, fire_id: str, node_id: str, reason: str = "") -> (FireRecord | None):
+    def add_assigned_node(self, fire_id: str, node_id: str, reason: str = "") -> FireRecord | None:
         """Convenience: add a node to assigned_nodes."""
         return self.assign_node(fire_id, node_id, reason)
 
-    def remove_assigned_node(self, fire_id: str, node_id: str, reason: str = "") -> (FireRecord | None):
+    def remove_assigned_node(self, fire_id: str, node_id: str, reason: str = "") -> FireRecord | None:
         """Convenience: remove a node from assigned_nodes."""
         rec = self._fires.get(fire_id)
         if rec is None:
@@ -257,18 +253,20 @@ class FireStateStore:
         new_nodes = [n for n in rec.assigned_nodes if n != node_id]
         if len(new_nodes) == len(rec.assigned_nodes):
             return rec  # no change
-        new_history = rec.history + (self._make_history_entry(rec.state, reason or "remove_assigned_node"),)
-        rec = rec.model_copy(update={
-            "assigned_nodes": new_nodes,
-            "updated_at":     time.time(),
-            "history":        new_history,
-        })
+        new_history = (*rec.history, self._make_history_entry(rec.state, reason or "remove_assigned_node"))
+        rec = rec.model_copy(
+            update={
+                "assigned_nodes": new_nodes,
+                "updated_at": time.time(),
+                "history": new_history,
+            }
+        )
         self._fires[fire_id] = rec
         if self._repo is not None:
             self._repo.upsert(rec)
         return rec
 
-    def update_severity(self, fire_id: str, new_severity: str, reason: str = "") -> (FireRecord | None):
+    def update_severity(self, fire_id: str, new_severity: str, reason: str = "") -> FireRecord | None:
         """Update severity without changing state.
 
         Args:
@@ -284,21 +282,21 @@ class FireStateStore:
             return None
         if rec.severity == new_severity:
             return rec  # no change
-        new_history = rec.history + (self._make_history_entry(rec.state, reason or "severity_update"),)
-        rec = rec.model_copy(update={
-            "severity": new_severity,
-            "updated_at": time.time(),
-            "history": new_history,
-        })
+        new_history = (*rec.history, self._make_history_entry(rec.state, reason or "severity_update"))
+        rec = rec.model_copy(
+            update={
+                "severity": new_severity,
+                "updated_at": time.time(),
+                "history": new_history,
+            }
+        )
         self._fires[fire_id] = rec
         if self._repo is not None:
             self._repo.upsert(rec)
-        log("FireStateStore",
-            f"fire {fire_id[:8]}: severity {rec.severity} → {new_severity}",
-            channel="STATE")
+        log("FireStateStore", f"fire {fire_id[:8]}: severity {rec.severity} → {new_severity}", channel="STATE")
         return rec
 
-    def update_leader_term(self, fire_id: str, new_term: int, reason: str = "") -> (FireRecord | None):
+    def update_leader_term(self, fire_id: str, new_term: int, reason: str = "") -> FireRecord | None:
         """Update leader_term without changing state.
 
         Args:
@@ -314,21 +312,21 @@ class FireStateStore:
             return None
         if rec.leader_term == new_term:
             return rec  # no change
-        new_history = rec.history + (self._make_history_entry(rec.state, reason or "leader_term_update"),)
-        rec = rec.model_copy(update={
-            "leader_term": new_term,
-            "updated_at": time.time(),
-            "history": new_history,
-        })
+        new_history = (*rec.history, self._make_history_entry(rec.state, reason or "leader_term_update"))
+        rec = rec.model_copy(
+            update={
+                "leader_term": new_term,
+                "updated_at": time.time(),
+                "history": new_history,
+            }
+        )
         self._fires[fire_id] = rec
         if self._repo is not None:
             self._repo.upsert(rec)
-        log("FireStateStore",
-            f"fire {fire_id[:8]}: leader_term {rec.leader_term} → {new_term}",
-            channel="STATE")
+        log("FireStateStore", f"fire {fire_id[:8]}: leader_term {rec.leader_term} → {new_term}", channel="STATE")
         return rec
 
-    def get(self, fire_id: str) -> (FireRecord | None):
+    def get(self, fire_id: str) -> FireRecord | None:
         """Return the FireRecord for fire_id, or None if not found.
 
         Args:
@@ -403,5 +401,6 @@ class FireStateStore:
     @staticmethod
     def _make_history_entry(state: str, reason: str) -> dict[str, Any]:
         return {"state": state, "reason": reason, "timestamp": time.time()}
+
 
 # endregion

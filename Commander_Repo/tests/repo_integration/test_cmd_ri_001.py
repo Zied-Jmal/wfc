@@ -1,12 +1,16 @@
 # RI-CMD-001: Commander central node publishes retained ONLINE announcement on startup
 
 from __future__ import annotations
+
+import json
+import threading  # pyright: ignore[reportUnusedImport]
 from typing import Any
 
-import threading, json, time  # pyright: ignore[reportUnusedImport]
 
 class TestCommanderStartupAnnouncement:
-    def test_retained_online_announcement_on_startup(self, mosquitto_broker: Any, env_setup: Any, tmp_path: Any) -> None:
+    def test_retained_online_announcement_on_startup(
+        self, mosquitto_broker: Any, env_setup: Any, tmp_path: Any
+    ) -> None:
         host, port = mosquitto_broker
         import paho.mqtt.client as mqtt
 
@@ -29,6 +33,7 @@ class TestCommanderStartupAnnouncement:
         sub.loop_start()
 
         from command_nodes.central.services.node_runtime import CentralNode
+
         node = CentralNode()
         node.start()
 

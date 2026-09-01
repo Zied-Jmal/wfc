@@ -7,24 +7,22 @@ FireSuppressedRule - stand down assigned node on suppression
 
 from __future__ import annotations
 
-# Standard Library
-
-# Third-Party Libraries
-
-# Project Imports
-
-from wfc_shared.enums.fire_status import SUPPRESSED
-from wfc_shared.enums.command_types import STAND_DOWN
-from wfc_shared.schemas.commands import Command
-from core.state.fire_state_store import FireRecord
 from core.node_registry.registry import NodeRegistry
-from core.rule_engine.rule import Rule, RuleResult
 from core.rule_engine.context import RuleContext
+from core.rule_engine.rule import Rule, RuleResult
+from core.state.fire_state_store import FireRecord
+from wfc_shared.enums.command_types import STAND_DOWN
+
+# Standard Library
+# Third-Party Libraries
+# Project Imports
+from wfc_shared.enums.fire_status import SUPPRESSED
+from wfc_shared.schemas.commands import Command
 
 # region  CLASS - FireSuppressedRule
 
-class FireSuppressedRule(Rule):
 
+class FireSuppressedRule(Rule):
     """
     Triggers on FIRE_SUPPRESSED. Sends STAND_DOWN to the single swarm
     leader assigned to this fire (fire.assigned_node) to close the
@@ -65,15 +63,16 @@ class FireSuppressedRule(Rule):
                     target_node=target,
                     command_type=STAND_DOWN,  # pyright: ignore[reportArgumentType]
                     payload={
-                        "fire_id":  fire.fire_id,
-                        "zone":     fire.zone,
+                        "fire_id": fire.fire_id,
+                        "zone": fire.zone,
                         "location": fire.zone,
-                        "reason":   "fire_suppressed",
+                        "reason": "fire_suppressed",
                     },
                 )
             ],
         )
 
     # endregion
+
 
 # endregion (end of class FireSuppressedRule)

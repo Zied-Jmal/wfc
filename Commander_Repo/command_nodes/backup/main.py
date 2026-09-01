@@ -8,11 +8,9 @@ ENV=docker python -m command_nodes.backup.main
 from __future__ import annotations
 
 # Standard Library
-
 import time
 
 # Project Imports
-
 from command_nodes.backup.services.backup_commander import BackupCommander
 
 if __name__ == "__main__":

@@ -1,15 +1,18 @@
 # RI-DASH-001: Dashboard approval_respond endpoint publishes correct wire-format decision (regression test)
 from __future__ import annotations
 
-import threading
 import json
+import threading
 import time
-import requests
 from typing import Any
+
+import requests
 
 
 class TestDashboardApprovalWireFormat:
-    def test_approval_respond_publishes_decision_string(self, mosquitto_broker: tuple[str, int], env_setup: None, tmp_path: Any) -> None:
+    def test_approval_respond_publishes_decision_string(
+        self, mosquitto_broker: tuple[str, int], env_setup: None, tmp_path: Any
+    ) -> None:
         host, port = mosquitto_broker
         import paho.mqtt.client as mqtt
 
@@ -31,6 +34,7 @@ class TestDashboardApprovalWireFormat:
         sub.loop_start()
 
         import uvicorn
+
         from dashboard.server import app
 
         dash_thread = threading.Thread(

@@ -9,21 +9,18 @@ MQTTClient - publish / subscribe wrapper over paho-mqtt
 from __future__ import annotations
 
 # Standard Library
-
 import json
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 
 # Third-Party Libraries
-
 import paho.mqtt.client as mqtt
-from paho.mqtt.enums import CallbackAPIVersion as MQTTCallbackAPIVersion
 from paho.mqtt.client import ConnectFlags, DisconnectFlags
+from paho.mqtt.enums import CallbackAPIVersion as MQTTCallbackAPIVersion
 from paho.mqtt.properties import Properties
 from paho.mqtt.reasoncodes import ReasonCode
 
 # Project Imports
-
 from core.utils.config import get_mqtt_host, get_mqtt_port
 
 Handler = Callable[[str, Any], None]
@@ -31,32 +28,33 @@ Handler = Callable[[str, Any], None]
 
 # region  CLASS - MQTTClient
 
+
 class MQTTClient:
     """MQTT wrapper handling connection, pub/sub, message dispatching, and LWT registration."""
 
-# region  INITIALISATION
+    # region  INITIALISATION
 
     def __init__(self, client_id: str) -> None:
         self._client_id = client_id
         self._connected = False
-        self.client     = mqtt.Client(
+        self.client = mqtt.Client(
             client_id=client_id,
             callback_api_version=MQTTCallbackAPIVersion.VERSION2,
         )
         self.host = get_mqtt_host()
         self.port = get_mqtt_port()
-        self._handler:               Handler | None = None
-        self._subscribed_topics: dict[str, int] = {}   # topic -> QoS
+        self._handler: Handler | None = None
+        self._subscribed_topics: dict[str, int] = {}  # topic -> QoS
 
         # Enable automatic reconnect (1s min, 60s max backoff)
         self.client.reconnect_delay_set(min_delay=1, max_delay=60)
-        self.client.on_message    = self._on_message
-        self.client.on_connect    = self._on_connect
+        self.client.on_message = self._on_message
+        self.client.on_connect = self._on_connect
         self.client.on_disconnect = self._on_disconnect
 
-# endregion
+    # endregion
 
-# region  CONNECTION MANAGEMENT
+    # region  CONNECTION MANAGEMENT
 
     def set_will(self, topic: str, payload: dict[str, Any] | str) -> None:
         """Register a Last Will and Testament message.
@@ -79,6 +77,7 @@ class MQTTClient:
             max_retries: Maximum retries (-1 = infinite until success).
         """
         import time
+
         attempt = 0
         while True:
             try:
@@ -87,9 +86,7 @@ class MQTTClient:
                 return  # Success
             except Exception as e:
                 if max_retries != -1 and attempt >= max_retries:
-                    raise RuntimeError(
-                        f"Failed to connect to MQTT broker after {attempt} attempts"
-                    ) from e
+                    raise RuntimeError(f"Failed to connect to MQTT broker after {attempt} attempts") from e
                 attempt += 1
                 print(f"⚠️  MQTT connection failed (attempt {attempt}): {e}")
                 print(f"   Retrying in {retry_interval}s...")
@@ -100,18 +97,18 @@ class MQTTClient:
         self.client.loop_stop()
         self.client.disconnect()
 
-# endregion
+    # endregion
 
-# region  PROPERTIES
+    # region  PROPERTIES
 
     @property
     def connected(self) -> bool:
         """True while the client is connected to the broker."""
         return self._connected
 
-# endregion
+    # endregion
 
-# region  PUB / SUB
+    # region  PUB / SUB
 
     def subscribe(self, topic: str, qos: int = 0) -> None:
         """Subscribe to an MQTT topic. Stores topic (and its QoS) for re-subscription on reconnect.
@@ -149,9 +146,9 @@ class MQTTClient:
         data = json.dumps(payload) if isinstance(payload, dict) else payload
         self.client.publish(topic, data, qos=qos, retain=True)
 
-# endregion
+    # endregion
 
-# region  HANDLER SYSTEM
+    # region  HANDLER SYSTEM
 
     def set_handler(self, fn: Handler) -> None:
         """Register a message handler. Multiple calls chain handlers.
@@ -163,45 +160,47 @@ class MQTTClient:
             self._handler = fn
         else:
             _prev = self._handler
+
             def _chained(t: str, p: Any) -> None:
                 _prev(t, p)
                 fn(t, p)
+
             self._handler = _chained
 
-# endregion
+    # endregion
 
     # region  PRIVATE - MQTT CALLBACKS
 
     def _on_connect(
         self,
-        client:     mqtt.Client,
-        userdata:   Any,
-        flags:      ConnectFlags,
-        rc:         ReasonCode,
+        client: mqtt.Client,
+        userdata: Any,
+        flags: ConnectFlags,
+        rc: ReasonCode,
         properties: Properties | None = None,
     ) -> None:
         """MQTT connect callback - resubscribe all topics on reconnect."""
-        self._connected = (rc == 0)
+        self._connected = rc == 0
         if self._connected:
             for topic, qos in list(self._subscribed_topics.items()):
                 self.client.subscribe(topic, qos=qos)
 
     def _on_disconnect(
         self,
-        client:           mqtt.Client,
-        userdata:         Any,
+        client: mqtt.Client,
+        userdata: Any,
         disconnect_flags: DisconnectFlags,
-        reason_code:      ReasonCode,
-        properties:       Properties | None = None,
+        reason_code: ReasonCode,
+        properties: Properties | None = None,
     ) -> None:
         """MQTT disconnect callback - mark disconnected."""
         self._connected = False
 
     def _on_message(
         self,
-        client:   mqtt.Client,
+        client: mqtt.Client,
         userdata: Any,
-        msg:      mqtt.MQTTMessage,
+        msg: mqtt.MQTTMessage,
     ) -> None:
         """MQTT message callback - decode JSON and dispatch to handler."""
         try:
@@ -210,6 +209,7 @@ class MQTTClient:
             payload = msg.payload.decode()
         if self._handler:
             self._handler(msg.topic, payload)
+
 
 # endregion
 

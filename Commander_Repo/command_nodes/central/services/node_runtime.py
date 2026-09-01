@@ -8,20 +8,21 @@ All commander-specific logic lives in CommanderCore. CentralNode:
 """
 
 from __future__ import annotations
+
 from typing import Any
 
+from command_nodes.core_commander.commander_core import CommanderCore
 from core.node.base_node import BaseNode
 from core.persistence.repositories.alert_repo import AlertRepository
-from command_nodes.core_commander.commander_core import CommanderCore
+from core.utils.config import get_node_location, get_node_zone
+from core.utils.logger import log
 from wfc_shared.enums.capabilities import DISPATCH_COMMANDS, HEARTBEAT, SWARM_LEAD
 from wfc_shared.enums.mission_status import PAUSED
-from core.utils.logger import log
-from core.utils.config import get_node_zone, get_node_location
 
 # region  CLASS - CentralNode
 
-class CentralNode(BaseNode):
 
+class CentralNode(BaseNode):
     """
     Primary command and control node.
 
@@ -40,7 +41,7 @@ class CentralNode(BaseNode):
             zone=get_node_zone(),
             location=get_node_location(),
         )
-# alerts kept here for _on_node_failed; core has its own copy too
+        # alerts kept here for _on_node_failed; core has its own copy too
         self._node_alerts = AlertRepository(db=self.db)
 
     # endregion
@@ -100,17 +101,16 @@ class CentralNode(BaseNode):
 
             if rec and rec.current_job and SWARM_LEAD in (rec.capabilities or []):
                 fire_id = rec.current_job
-                log("CentralNode",
+                log(
+                    "CentralNode",
                     f"swarm leader {node_id} was handling fire={fire_id[:8]} - re-dispatching",
-                    channel="SYSTEM")
+                    channel="SYSTEM",
+                )
                 self.registry.release_job(node_id)
 
                 mission = self._core.missions.get_for_fire(fire_id)
                 if mission:
-                    self._core.missions.transition(
-                        mission.mission_id, PAUSED,
-                        reason=f"leader_{node_id}_offline"
-                    )
+                    self._core.missions.transition(mission.mission_id, PAUSED, reason=f"leader_{node_id}_offline")
                 self._core.redispatch_fire(fire_id, dead_leader=node_id)
 
     def _on_node_recovered(self, payload: dict[str, Any]) -> None:
@@ -120,5 +120,6 @@ class CentralNode(BaseNode):
             self._announce_node_status(node_id, "ONLINE")
 
     # endregion
+
 
 # endregion (end of class CentralNode)

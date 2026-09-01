@@ -10,17 +10,19 @@ from __future__ import annotations
 
 import time
 import uuid
+from typing import Any
 
-from wfc_shared.enums.topics import command_topic
-from core.messaging.mqtt_client import MQTTClient
 from core.commands_monitor.command_tracker import CommandTracker
+from core.messaging.mqtt_client import MQTTClient
 from core.utils.logger import log
+from wfc_shared.enums.topics import command_topic
 
 # command types that are emitted at most once per fire by a
 # single owning rule (see RuleEngine rules: FireDispatchRule,
 # FireContainedRule, FireSuppressedRule). Safe to key deterministically
 # by (command_type, fire_id, target_node) - see module header.
 _IDEMPOTENT_COMMAND_TYPES = {"RESPOND_TO_FIRE", "CONTAIN_FIRE", "STAND_DOWN"}
+
 
 def _deterministic_trace_id(command_type: str, fire_id: str, target_node: str) -> str:
     """
@@ -36,9 +38,11 @@ def _deterministic_trace_id(command_type: str, fire_id: str, target_node: str) -
     key = f"{command_type}:{fire_id}:{target_node}"
     return str(uuid.uuid5(uuid.NAMESPACE_OID, key))
 
+
 # region  CLASS - CommandDispatcher
 
-class CommandDispatcher:    
+
+class CommandDispatcher:
     """Publishes commands over MQTT and registers them in CommandTracker.
 
     Assigns trace_id to every outgoing command, registers it in the
@@ -54,7 +58,7 @@ class CommandDispatcher:
             mqtt: MQTTClient instance for publishing.
             tracker: Optional CommandTracker for ACK tracking.
         """
-        self._mqtt    = mqtt
+        self._mqtt = mqtt
         self._tracker = tracker
 
     # endregion
@@ -83,29 +87,31 @@ class CommandDispatcher:
             trace_id = str(uuid.uuid4())
 
         payload = {
-            "trace_id":     trace_id,
-            "command_id":   getattr(command, "command_id", str(uuid.uuid4())),
-            "target_node":  command.target_node,
+            "trace_id": trace_id,
+            "command_id": getattr(command, "command_id", str(uuid.uuid4())),
+            "target_node": command.target_node,
             "command_type": command.command_type,
-            "payload":      getattr(command, "payload", {}),
-            "timestamp":    time.time(),
+            "payload": getattr(command, "payload", {}),
+            "timestamp": time.time(),
         }
 
-# Register in tracker before publishing so history starts clean.
-# CommandTracker.create() is already idempotent (safe to call
-# twice with the same trace_id).
+        # Register in tracker before publishing so history starts clean.
+        # CommandTracker.create() is already idempotent (safe to call
+        # twice with the same trace_id).
         if self._tracker:  # pyright: ignore[reportUnknownMemberType]
             self._tracker.create(trace_id, payload)  # pyright: ignore[reportUnknownMemberType]
 
         self._mqtt.publish(command_topic(command.target_node), payload, qos=1)
 
-        log("CommandDispatcher",
-            f"sent {command.command_type} → {command.target_node} "
-            f"trace={trace_id[:8]}",
-            channel="COMMANDS")
+        log(
+            "CommandDispatcher",
+            f"sent {command.command_type} → {command.target_node} trace={trace_id[:8]}",
+            channel="COMMANDS",
+        )
 
         return trace_id
 
     # endregion
+
 
 # endregion (end of class CommandDispatcher)

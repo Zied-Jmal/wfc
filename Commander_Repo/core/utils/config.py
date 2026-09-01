@@ -25,13 +25,15 @@ WFC_VERSION: Final = "1.7"
 
 ENV = os.getenv("ENV", "dev")
 
+
 def _load_env_file() -> None:
     mapping = {
-        "test":   ".env.test",
-        "prod":   ".env.prod",
+        "test": ".env.test",
+        "prod": ".env.prod",
         "docker": ".env.docker",
     }
     load_dotenv(mapping.get(ENV, ".env"), override=False)
+
 
 _load_env_file()
 
@@ -47,21 +49,27 @@ _load_env_file()
 # - The old `Config.MQTT_HOST = os.getenv(...)` class-level
 # pattern (evaluated once on import) is gone.
 
+
 def get_mqtt_host() -> str:
     return os.getenv("MQTT_HOST", "localhost") or "localhost"
+
 
 def get_mqtt_port() -> int:
     return int(os.getenv("MQTT_PORT", "1883") or 1883)
 
+
 def get_node_id() -> str:
     return os.getenv("NODE_ID", "central-commander")
+
 
 def get_node_type() -> str:
     return os.getenv("NODE_TYPE", "CENTRAL_COMMANDER")
 
+
 def get_node_zone() -> str | None:
     """Return the node's zone label, or None if not configured."""
     return os.getenv("NODE_ZONE", "") or None
+
 
 def get_node_location() -> tuple[float, float] | None:
     """Parse NODE_LOCATION env var ("x,y") into a float tuple.
@@ -79,6 +87,7 @@ def get_node_location() -> tuple[float, float] | None:
     except ValueError:
         return None
 
+
 def get_db_path() -> str:
     """Return the SQLite database path for this node.
 
@@ -92,5 +101,6 @@ def get_db_path() -> str:
     if explicit:
         return explicit
     return f"data/{get_node_id()}.db"
+
 
 # endregion

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from core.rule_engine.rule import Rule, RuleResult
-from core.rule_engine.context import RuleContext
 from core.node_registry.registry import NodeRegistry
+from core.rule_engine.context import RuleContext
+from core.rule_engine.rule import Rule, RuleResult
+from core.rule_engine.trigger import EvalTrigger
 from core.state.fire_state_store import FireRecord
 from wfc_shared.enums.fire_status import ACTIVE, SPREADING
-from core.rule_engine.trigger import EvalTrigger
+
 
 class SeverityIncreaseRule(Rule):
     """
@@ -36,6 +37,6 @@ class SeverityIncreaseRule(Rule):
             reason=f"severity_increased_to_{new_intensity}",
             state_updates={
                 "severity": new_intensity,
-                "transition_to": SPREADING if fire.state == ACTIVE else fire.state
-            }
+                "transition_to": SPREADING if fire.state == ACTIVE else fire.state,
+            },
         )

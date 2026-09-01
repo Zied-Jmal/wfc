@@ -22,8 +22,10 @@ This is the scenario most likely to catch silent regressions in LWT wiring
 never receives the will and Stage D will time out specifically).
 
 """
+
 from __future__ import annotations
 
+import contextlib
 import json
 import threading
 import time
@@ -51,27 +53,39 @@ def build() -> Scenario:
             client_id=fake_node_id,
             callback_api_version=CallbackAPIVersion.VERSION2,
         )
-        offline_payload: str = json.dumps({
-            "node_id": fake_node_id, "node_type": "SCOUT_DRONE",
-            "capabilities": [], "status": "OFFLINE",
-            "announced_at": time.time(),
-        })
+        offline_payload: str = json.dumps(
+            {
+                "node_id": fake_node_id,
+                "node_type": "SCOUT_DRONE",
+                "capabilities": [],
+                "status": "OFFLINE",
+                "announced_at": time.time(),
+            }
+        )
         client.will_set(
-            f"wfc/registry/announce/{fake_node_id}", offline_payload, qos=1, retain=True,
+            f"wfc/registry/announce/{fake_node_id}",
+            offline_payload,
+            qos=1,
+            retain=True,
         )
         client.connect(MQTT_HOST, MQTT_PORT)
         client.loop_start()
         _state["client"] = client
 
         online_payload: dict[str, Any] = {
-            "node_id": fake_node_id, "node_type": "SCOUT_DRONE",
+            "node_id": fake_node_id,
+            "node_type": "SCOUT_DRONE",
             "capabilities": ["RECEIVE_COMMANDS", "HEARTBEAT", "TELEMETRY", "SCOUT"],
-            "status": "ONLINE", "announced_at": time.time(),
-            "zone": "zone_alpha", "location": [36.8065, 10.1815],
+            "status": "ONLINE",
+            "announced_at": time.time(),
+            "zone": "zone_alpha",
+            "location": [36.8065, 10.1815],
         }
         client.publish(
-            f"wfc/registry/announce/{fake_node_id}", json.dumps(online_payload),
-            qos=1, retain=True,
+            f"wfc/registry/announce/{fake_node_id}",
+            json.dumps(online_payload),
+            qos=1,
+            retain=True,
         )
         return {"fake_node_id": fake_node_id, "connected_at": time.time()}
 
@@ -119,10 +133,14 @@ def build() -> Scenario:
             return {"heartbeat_error": "no client from stage A"}
 
         def hb_payload() -> str:
-            return json.dumps({
-                "node_id": fake_node_id, "type": "SCOUT_DRONE",
-                "timestamp": time.time(), "status": "alive",
-            })
+            return json.dumps(
+                {
+                    "node_id": fake_node_id,
+                    "type": "SCOUT_DRONE",
+                    "timestamp": time.time(),
+                    "status": "alive",
+                }
+            )
 
         client.publish(f"wfc/nodes/{fake_node_id}/heartbeat", hb_payload(), qos=0)
 
@@ -133,10 +151,8 @@ def build() -> Scenario:
             try:
                 client._sock_close()
             except Exception:
-                try:
+                with contextlib.suppress(Exception):
                     client.socket().close()
-                except Exception:
-                    pass
 
         threading.Thread(target=_delayed_kill, daemon=True).start()
         return {"heartbeats_sent_at": time.time(), "kill_scheduled": True}

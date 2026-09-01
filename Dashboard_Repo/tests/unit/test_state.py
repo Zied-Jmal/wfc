@@ -2,18 +2,23 @@
 from __future__ import annotations
 
 import time
+
+from dashboard.state import SwarmState
 from wfc_shared.schemas.announcements import NodeAnnouncement
 from wfc_shared.schemas.telemetry import DroneTelemetry
-from dashboard.state import SwarmState
 
 
 class TestSwarmState:
-    def test_apply_telemetry_noop_for_unregistered_node(self, swarm_state: SwarmState, drone_telemetry: DroneTelemetry) -> None:
+    def test_apply_telemetry_noop_for_unregistered_node(
+        self, swarm_state: SwarmState, drone_telemetry: DroneTelemetry
+    ) -> None:
         swarm_state.apply_telemetry(drone_telemetry)
         node = swarm_state.get_node("sd-1")
         assert node is None
 
-    def test_announcement_overwrites_offline_status(self, swarm_state: SwarmState, announcement: NodeAnnouncement) -> None:
+    def test_announcement_overwrites_offline_status(
+        self, swarm_state: SwarmState, announcement: NodeAnnouncement
+    ) -> None:
         # First announce as ONLINE
         swarm_state.apply_announcement(announcement)
         node = swarm_state.get_node("sl-1")

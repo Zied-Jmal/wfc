@@ -1,9 +1,13 @@
 # RI-CMD-002: HIGH fire ESCALATE_FIRE held for approval, observable on wire
 
 from __future__ import annotations
+
+import json
+import threading
+import time
+import uuid
 from typing import Any
 
-import threading, json, time, uuid
 
 class TestHighFireHeldForApproval:
     def test_high_fire_held_not_auto_dispatched(self, mosquitto_broker: Any, env_setup: Any, tmp_path: Any) -> None:
@@ -11,7 +15,7 @@ class TestHighFireHeldForApproval:
         import paho.mqtt.client as mqtt
 
         pending_received = threading.Event()
-        cmd_received = threading.Event()  # pyright: ignore[reportUnusedVariable]
+        threading.Event()  # pyright: ignore[reportUnusedVariable]
         pending_msg = {}
         cmd_msgs = []
 
@@ -35,6 +39,7 @@ class TestHighFireHeldForApproval:
         sub.loop_start()
 
         from command_nodes.central.services.node_runtime import CentralNode
+
         node = CentralNode()
         node.start()
         time.sleep(1)
@@ -45,6 +50,7 @@ class TestHighFireHeldForApproval:
         # Wait for central-commander (which has DISPATCH_COMMANDS)
         # to reach ACTIVE status via its own heartbeat cycle
         from wfc_shared.enums.node_status import ACTIVE as STATUS_ACTIVE
+
         for _ in range(50):
             cc = node._core._registry.get("central-commander")  # pyright: ignore[reportPrivateUsage]
             if cc and cc.status == STATUS_ACTIVE:
@@ -75,6 +81,10 @@ class TestHighFireHeldForApproval:
 
         assert ok, "No COMMAND_PENDING on wfc/approval/pending within 15s"
         assert pending_msg["data"].get("event") == "COMMAND_PENDING"  # pyright: ignore[reportUnknownMemberType]
-        assert any(
-            m.get("command_type") == "ESCALATE_FIRE" for m in cmd_msgs  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType, reportUnknownVariableType]
-        ) is False, "ESCALATE_FIRE was dispatched directly (should be held)"
+        assert (
+            any(
+                m.get("command_type") == "ESCALATE_FIRE"  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
+                for m in cmd_msgs  # pyright: ignore[reportUnknownVariableType]
+            )
+            is False
+        ), "ESCALATE_FIRE was dispatched directly (should be held)"

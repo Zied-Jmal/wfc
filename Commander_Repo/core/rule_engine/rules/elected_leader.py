@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from core.rule_engine.rule import Rule, RuleResult
-from core.rule_engine.context import RuleContext
 from core.node_registry.registry import NodeRegistry
+from core.rule_engine.context import RuleContext
+from core.rule_engine.rule import Rule, RuleResult
 from core.state.fire_state_store import FireRecord
-from wfc_shared.schemas.commands import Command
 from wfc_shared.enums.command_types import CONFIRM_LEADERSHIP
+from wfc_shared.schemas.commands import Command
+
 
 class ElectedLeaderRule(Rule):
     """Accepts bully election results via term comparison."""
@@ -43,7 +44,7 @@ class ElectedLeaderRule(Rule):
                         "severity": fire.severity,
                         "location_coords": list(fire.location_coords or []),
                         "term_accepted": meta["term"],
-                    }
+                    },
                 )
-            ]
+            ],
         )

@@ -21,33 +21,34 @@ import signal
 import sys
 from types import FrameType
 
-from core.node.firefighting_drone_node import FirefightingDroneNode
-from core.utils.config import (  # pyright: ignore[reportUnknownVariableType]
-    get_node_id,
-    get_node_zone,
-    get_node_gps,
-    get_leader_id,
-    get_payload_type,
-    get_initial_payload_l,
-    get_initial_battery_wh,
-    get_wind_speed_mps,
-    get_wind_dir_deg,
-    get_turbulence,
-)
 from action.gps import GPSCoord
 from action.wind import WindModel
+
+from core.node.firefighting_drone_node import FirefightingDroneNode
+from core.utils.config import (  # pyright: ignore[reportUnknownVariableType]
+    get_initial_battery_wh,
+    get_initial_payload_l,
+    get_leader_id,
+    get_node_gps,
+    get_node_id,
+    get_node_zone,
+    get_payload_type,
+    get_turbulence,
+    get_wind_dir_deg,
+    get_wind_speed_mps,
+)
 
 
 def main() -> None:
     """Entrypoint for FirefightingDroneNode - starts a firefighting drone node."""
 
-    node_id  = get_node_id()
-    zone     = get_node_zone() or "zone_alpha"
+    node_id = get_node_id()
+    zone = get_node_zone() or "zone_alpha"
     home_gps: GPSCoord = get_node_gps()  # pyright: ignore[reportUnknownVariableType]
-    leader   = get_leader_id()
+    leader = get_leader_id()
     payload_type = get_payload_type()
-    payload_l    = get_initial_payload_l()
-    battery_wh   = get_initial_battery_wh()
+    payload_l = get_initial_payload_l()
+    battery_wh = get_initial_battery_wh()
 
     wind = WindModel(
         mean_speed_mps=get_wind_speed_mps(),
@@ -73,7 +74,7 @@ def main() -> None:
         sys.exit(0)
 
     signal.signal(signal.SIGTERM, _shutdown)
-    signal.signal(signal.SIGINT,  _shutdown)
+    signal.signal(signal.SIGINT, _shutdown)
 
     node.start()
 
@@ -86,12 +87,13 @@ def main() -> None:
         f"  battery  : {battery_wh:.1f} Wh\n"
         f"  wind     : {get_wind_speed_mps()} m/s FROM {get_wind_dir_deg()}°T"
         f" [{get_turbulence()} turbulence]\n"
-        f"  broker   : {os.getenv('MQTT_HOST','localhost')}:{os.getenv('MQTT_PORT','1883')}",
+        f"  broker   : {os.getenv('MQTT_HOST', 'localhost')}:{os.getenv('MQTT_PORT', '1883')}",
         flush=True,
     )
 
     try:
         import time
+
         while True:
             time.sleep(1)
     except KeyboardInterrupt:

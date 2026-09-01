@@ -13,14 +13,15 @@ import os
 import time
 from typing import Final, Self, TypedDict
 
-from action.gps import GPSCoord, gps_to_ned, destination_point
-from action.movement import DroneMovementEngine, CRUISE_ALTITUDE_M
+from action.gps import GPSCoord, destination_point, gps_to_ned
+from action.movement import CRUISE_ALTITUDE_M, DroneMovementEngine
 from action.sensors import FireSensorSuite
 from action.wind import WindModel
 
 
 class HotspotDict(TypedDict):
     """Single thermal hotspot record with NED position and timestamps."""
+
     ned: tuple[float, float]
     peak_temp_c: float
     first_seen: float
@@ -29,9 +30,9 @@ class HotspotDict(TypedDict):
 
 # -- Scout flight constants (configurable via env vars) ----------
 ORBIT_RADIUS_BY_SEVERITY: Final[dict[str, float]] = {
-    "LOW":      float(os.getenv("SCOUT_ORBIT_RADIUS_LOW", "60.0")),
-    "MEDIUM":   float(os.getenv("SCOUT_ORBIT_RADIUS_MEDIUM", "80.0")),
-    "HIGH":     float(os.getenv("SCOUT_ORBIT_RADIUS_HIGH", "110.0")),
+    "LOW": float(os.getenv("SCOUT_ORBIT_RADIUS_LOW", "60.0")),
+    "MEDIUM": float(os.getenv("SCOUT_ORBIT_RADIUS_MEDIUM", "80.0")),
+    "HIGH": float(os.getenv("SCOUT_ORBIT_RADIUS_HIGH", "110.0")),
     "CRITICAL": float(os.getenv("SCOUT_ORBIT_RADIUS_CRITICAL", "140.0")),
 }
 DEFAULT_ORBIT_RADIUS_M: Final[float] = float(os.getenv("SCOUT_DEFAULT_ORBIT_RADIUS_M", "80.0"))
@@ -46,11 +47,11 @@ HOTSPOT_DEDUP_RADIUS_M: Final[float] = float(os.getenv("SCOUT_HOTSPOT_DEDUP_RADI
 
 
 class ScoutState:
-    IDLE       = "IDLE"
+    IDLE = "IDLE"
     TRANSITING = "TRANSITING"
-    ORBITING   = "ORBITING"
+    ORBITING = "ORBITING"
     GRID_SWEEP = "GRID_SWEEP"
-    RETURNING  = "RETURNING"
+    RETURNING = "RETURNING"
 
 
 class ScoutActionEngine:
@@ -69,8 +70,8 @@ class ScoutActionEngine:
     def __init__(
         self,
         drone_id: str,
-        home:     GPSCoord,
-        wind:     WindModel,
+        home: GPSCoord,
+        wind: WindModel,
     ) -> None:
         """
         Initialize the scout action engine.
@@ -94,26 +95,26 @@ class ScoutActionEngine:
         self._fire_ned: tuple[float, float] | None = None
         self._severity: str = "MEDIUM"
 
-# Orbit state
+        # Orbit state
         self._orbit_radius_m: float = DEFAULT_ORBIT_RADIUS_M
         self._orbit_waypoints: list[GPSCoord] = []
         self._orbit_idx: int = 0
         self._orbit_passes: int = 0
 
-# Grid sweep state
+        # Grid sweep state
         self._grid_waypoints: list[GPSCoord] = []
         self._grid_idx: int = 0
 
-# Sensor output (updated every tick)
+        # Sensor output (updated every tick)
         self.last_sensor_readings: dict[str, float | None] = {}
 
-# Hotspot map
+        # Hotspot map
         self._hotspots: list[HotspotDict] = []
 
-# Perimeter estimate (m) -- updated each orbit pass
+        # Perimeter estimate (m) -- updated each orbit pass
         self._perimeter_m: float | None = None
 
-# region  PUBLIC API
+    # region  PUBLIC API
 
     @property
     def position_gps(self) -> GPSCoord:
@@ -173,11 +174,11 @@ class ScoutActionEngine:
         Returns:
             Self for method chaining.
         """
-        self._fire_gps    = fire_gps
-        self._severity    = severity
-        self._fire_ned    = self._gps_to_fire_ned(fire_gps)
+        self._fire_gps = fire_gps
+        self._severity = severity
+        self._fire_ned = self._gps_to_fire_ned(fire_gps)
         self._orbit_radius_m = ORBIT_RADIUS_BY_SEVERITY.get(severity, DEFAULT_ORBIT_RADIUS_M)
-        self._state       = ScoutState.TRANSITING
+        self._state = ScoutState.TRANSITING
         target_gps = GPSCoord(fire_gps.lat_deg, fire_gps.lon_deg, CRUISE_ALTITUDE_M)
         self._movement.set_waypoint(target_gps, speed_mps=TRANSIT_SPEED_MPS)
         if self._fire_ned:
@@ -194,8 +195,8 @@ class ScoutActionEngine:
         """
         if self._fire_gps and self._fire_ned:
             self._grid_waypoints = self._build_grid_waypoints()
-            self._grid_idx       = 0
-            self._state          = ScoutState.GRID_SWEEP
+            self._grid_idx = 0
+            self._state = ScoutState.GRID_SWEEP
             if self._grid_waypoints:
                 self._movement.set_waypoint(self._grid_waypoints[0], speed_mps=GRID_SPEED_MPS)
         return self
@@ -235,16 +236,15 @@ class ScoutActionEngine:
             if self._movement.is_at_waypoint():
                 self._advance_grid()
 
-        elif self._state == ScoutState.RETURNING:
-            if self._movement.is_at_waypoint():
-                self._state = ScoutState.IDLE
-                self._wind.clear_fire()
+        elif self._state == ScoutState.RETURNING and self._movement.is_at_waypoint():
+            self._state = ScoutState.IDLE
+            self._wind.clear_fire()
 
         self._update_sensors(dt)
 
-# endregion
+    # endregion
 
-# region  PRIVATE -- orbit management
+    # region  PRIVATE -- orbit management
 
     def _start_orbit(self) -> None:
         """Build orbit waypoints and begin first leg."""
@@ -252,15 +252,15 @@ class ScoutActionEngine:
             self._state = ScoutState.IDLE
             return
         self._orbit_waypoints = self._build_orbit_waypoints()
-        self._orbit_idx       = 0
-        self._state           = ScoutState.ORBITING
+        self._orbit_idx = 0
+        self._state = ScoutState.ORBITING
         self._movement.set_waypoint(self._orbit_waypoints[0], speed_mps=ORBIT_SPEED_MPS)
 
     def _advance_orbit(self) -> None:
         """Advance to next orbit waypoint; count passes."""
         self._orbit_idx += 1
         if self._orbit_idx >= len(self._orbit_waypoints):
-            self._orbit_idx    = 0
+            self._orbit_idx = 0
             self._orbit_passes += 1
             self._update_perimeter_estimate()
         wp = self._orbit_waypoints[self._orbit_idx]
@@ -289,9 +289,9 @@ class ScoutActionEngine:
         r_est = self._orbit_radius_m * math.sqrt(max(0.01, cover))  # pyright: ignore[reportArgumentType]
         self._perimeter_m = round(2 * math.pi * r_est, 1)
 
-# endregion
+    # endregion
 
-# region  PRIVATE -- grid management
+    # region  PRIVATE -- grid management
 
     def _build_grid_waypoints(self) -> list[GPSCoord]:
         """
@@ -305,12 +305,12 @@ class ScoutActionEngine:
         half = (GRID_LEGS - 1) / 2.0
         for i in range(GRID_LEGS):
             lateral_m = (i - half) * GRID_STEP_M
-            leg_half   = GRID_LEGS * GRID_STEP_M / 2
-            start_bear = 0.0   if i % 2 == 0 else 180.0
-            end_bear   = 180.0 if i % 2 == 0 else 0.0
+            leg_half = GRID_LEGS * GRID_STEP_M / 2
+            start_bear = 0.0 if i % 2 == 0 else 180.0
+            end_bear = 180.0 if i % 2 == 0 else 0.0
             lat_origin = destination_point(self._fire_gps, 90.0, lateral_m)
             p1 = destination_point(lat_origin, start_bear, leg_half)
-            p2 = destination_point(lat_origin, end_bear,   leg_half)
+            p2 = destination_point(lat_origin, end_bear, leg_half)
             wps.append(GPSCoord(p1.lat_deg, p1.lon_deg, ORBIT_ALTITUDE_M))
             wps.append(GPSCoord(p2.lat_deg, p2.lon_deg, ORBIT_ALTITUDE_M))
         return wps
@@ -321,27 +321,22 @@ class ScoutActionEngine:
         if self._grid_idx >= len(self._grid_waypoints):
             self._start_orbit()
         else:
-            self._movement.set_waypoint(
-                self._grid_waypoints[self._grid_idx], speed_mps=GRID_SPEED_MPS
-            )
+            self._movement.set_waypoint(self._grid_waypoints[self._grid_idx], speed_mps=GRID_SPEED_MPS)
 
-# endregion
+    # endregion
 
-# region  PRIVATE -- sensor update
+    # region  PRIVATE -- sensor update
 
     def _update_sensors(self, dt: float) -> None:
         """Compute sensor readings based on current position and fire state."""
-        if self._fire_ned is None or self._state not in (
-            ScoutState.ORBITING, ScoutState.GRID_SWEEP
-        ):
+        if self._fire_ned is None or self._state not in (ScoutState.ORBITING, ScoutState.GRID_SWEEP):
             self.last_sensor_readings = {}
             return
 
-        pos    = self._movement.position_gps
+        pos = self._movement.position_gps
         my_ned = gps_to_ned(
             GPSCoord(pos.lat_deg, pos.lon_deg, 0.0),
-            GPSCoord(self._fire_gps.lat_deg, self._fire_gps.lon_deg, 0.0)
-            if self._fire_gps else pos
+            GPSCoord(self._fire_gps.lat_deg, self._fire_gps.lon_deg, 0.0) if self._fire_gps else pos,
         )
         drone_ned_3d: tuple[float, float, float] = (
             -my_ned[0],
@@ -350,12 +345,8 @@ class ScoutActionEngine:
         )
         fire_ned_origin: tuple[float, float] = (0.0, 0.0)
 
-        wind_n = self._wind.mean_speed_mps * math.cos(
-            math.radians(self._wind.mean_direction_deg + 180)
-        )
-        wind_e = self._wind.mean_speed_mps * math.sin(
-            math.radians(self._wind.mean_direction_deg + 180)
-        )
+        wind_n = self._wind.mean_speed_mps * math.cos(math.radians(self._wind.mean_direction_deg + 180))
+        wind_e = self._wind.mean_speed_mps * math.sin(math.radians(self._wind.mean_direction_deg + 180))
 
         thermal_peak = self._sensors.thermal_peak_temp_c(
             drone_ned=drone_ned_3d,
@@ -382,18 +373,18 @@ class ScoutActionEngine:
             wind_e_mps=wind_e,
         )
         flame_h = self._sensors.flame_height_m(self._severity)
-        dist_f  = self._sensors.distance_to_flame_m(drone_ned_3d, fire_ned_origin)
+        dist_f = self._sensors.distance_to_flame_m(drone_ned_3d, fire_ned_origin)
 
         self.last_sensor_readings = {
-            "thermal_peak_temp_c":    thermal_peak,
-            "thermal_coverage_pct":   thermal_cov,
-            "smoke_density_mg_m3":    smoke_mg,
-            "smoke_optical_density":  smoke_od,
-            "flame_height_m":         flame_h,
-            "distance_to_flame_m":    dist_f if not math.isnan(dist_f) else None,
-            "wind_speed_mps":         round(self._wind.mean_speed_mps, 2),
-            "wind_direction_deg":     round(self._wind.mean_direction_deg, 1),
-            "perimeter_estimate_m":   self._perimeter_m,
+            "thermal_peak_temp_c": thermal_peak,
+            "thermal_coverage_pct": thermal_cov,
+            "smoke_density_mg_m3": smoke_mg,
+            "smoke_optical_density": smoke_od,
+            "flame_height_m": flame_h,
+            "distance_to_flame_m": dist_f if not math.isnan(dist_f) else None,
+            "wind_speed_mps": round(self._wind.mean_speed_mps, 2),
+            "wind_direction_deg": round(self._wind.mean_direction_deg, 1),
+            "perimeter_estimate_m": self._perimeter_m,
         }
 
         if thermal_peak > 350.0:
@@ -407,17 +398,20 @@ class ScoutActionEngine:
             dE = drone_ned[1] - hE
             if math.sqrt(dN * dN + dE * dE) < HOTSPOT_DEDUP_RADIUS_M:
                 h["peak_temp_c"] = max(h["peak_temp_c"], temp_c)
-                h["last_seen"]   = time.time()
+                h["last_seen"] = time.time()
                 return
-        self._hotspots.append({
-            "ned":        (drone_ned[0], drone_ned[1]),
-            "peak_temp_c": temp_c,
-            "first_seen": time.time(),
-            "last_seen":  time.time(),
-        })
+        self._hotspots.append(
+            {
+                "ned": (drone_ned[0], drone_ned[1]),
+                "peak_temp_c": temp_c,
+                "first_seen": time.time(),
+                "last_seen": time.time(),
+            }
+        )
 
     def _gps_to_fire_ned(self, fire_gps: GPSCoord) -> tuple[float, float]:
         """NED offset of fire from drone home (approximate, used for wind model)."""
         return (0.0, 0.0)
+
 
 # endregion

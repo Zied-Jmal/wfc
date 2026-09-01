@@ -8,7 +8,9 @@ Topic namespace: wfc/
 """
 
 from __future__ import annotations
+
 from typing import Final
+
 # Wildcard subscriptions
 WFC_ALL: Final[str] = "wfc/#"
 REGISTRY_ANNOUNCE_WILDCARD: Final[str] = "wfc/registry/announce/#"
@@ -17,7 +19,7 @@ NODES_HEARTBEAT_WILDCARD: Final[str] = "wfc/nodes/+/heartbeat"
 SWARM_STATUS_SUB: Final[str] = "wfc/swarm/status/#"
 SWARM_ELECTION_SUB: Final[str] = "wfc/swarm/election/#"
 # Topic templates (use builder helpers - never format manually)
-REGISTRY_ANNOUNCE_TARGET: Final[str] = "wfc/registry/announce/{node_id}" # retained, per-node
+REGISTRY_ANNOUNCE_TARGET: Final[str] = "wfc/registry/announce/{node_id}"  # retained, per-node
 NODE_HEARTBEAT: Final[str] = "wfc/nodes/{node_id}/heartbeat"
 COMMAND_TARGET: Final[str] = "wfc/command/{node_id}"
 TELEMETRY_TARGET: Final[str] = "wfc/telemetry/{drone_id}"
@@ -29,15 +31,17 @@ SWARM_STATUS_PREFIX: Final[str] = "wfc/swarm/status/"
 SWARM_ELECTION_PREFIX: Final[str] = "wfc/swarm/election/"
 # topics
 ACK: Final[str] = "wfc/ack"
-EVENTS_FIRE: Final[str] = "wfc/events/fire" # sensor initial detection
-FIRE_INTENSITY: Final[str] = "wfc/events/fire/intensity" # leader intensity update
-FIRE_VERIFIED_TOPIC: Final[str] = "wfc/events/fire/verified" # scout confirmed detection
-FIRE_REKINDLED_TOPIC: Final[str] = "wfc/events/fire/rekindled" # previously suppressed, re-ignited
-APPROVAL_PENDING: Final[str] = "wfc/approval/pending" # commander operator
-APPROVAL_RESPONSE: Final[str] = "wfc/approval/response" # operator commander
-STATE_SNAPSHOT: Final[str] = "wfc/state/snapshot" # commander every 10 s (retained)
-SYSTEM_FAILOVER: Final[str] = "wfc/system/failover" # backup promotion event
-SYSTEM_LEASE: Final[str] = "wfc/system/lease" # retained {owner, term, since}
+EVENTS_FIRE: Final[str] = "wfc/events/fire"  # sensor initial detection
+FIRE_INTENSITY: Final[str] = "wfc/events/fire/intensity"  # leader intensity update
+FIRE_VERIFIED_TOPIC: Final[str] = "wfc/events/fire/verified"  # scout confirmed detection
+FIRE_REKINDLED_TOPIC: Final[str] = "wfc/events/fire/rekindled"  # previously suppressed, re-ignited
+APPROVAL_PENDING: Final[str] = "wfc/approval/pending"  # commander operator
+APPROVAL_RESPONSE: Final[str] = "wfc/approval/response"  # operator commander
+STATE_SNAPSHOT: Final[str] = "wfc/state/snapshot"  # commander every 10 s (retained)
+SYSTEM_FAILOVER: Final[str] = "wfc/system/failover"  # backup promotion event
+SYSTEM_LEASE: Final[str] = "wfc/system/lease"  # retained {owner, term, since}
+
+
 # Builder helpers
 def registry_announce_topic(node_id: str) -> str:
     """Per-node retained announce slot.

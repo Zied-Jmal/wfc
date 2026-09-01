@@ -23,6 +23,7 @@ dashboard never ingested it" vs "the dashboard ingested it but the SSE
 stream never pushed it to clients".
 
 """
+
 from __future__ import annotations
 
 import json
@@ -137,10 +138,7 @@ def build(leader_id: str = "sl-A-01") -> Scenario:
                 if resp.status_code != 200:
                     return False
                 events: Any = resp.json()
-                return any(
-                    isinstance(e, dict) and drone_id in json.dumps(e)
-                    for e in events
-                )
+                return any(isinstance(e, dict) and drone_id in json.dumps(e) for e in events)
         except Exception:
             return False
 

@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from typing import Final
 
-UNREGISTERED: Final[str] = "UNREGISTERED"   # not yet known to the system
-REGISTERED: Final[str] = "REGISTERED"     # announced; waiting for first heartbeat
-ACTIVE: Final[str] = "ACTIVE"         # heartbeat received; eligible for commands
-OFFLINE: Final[str] = "OFFLINE"        # declared dead (timeout or LWT)
+UNREGISTERED: Final[str] = "UNREGISTERED"  # not yet known to the system
+REGISTERED: Final[str] = "REGISTERED"  # announced; waiting for first heartbeat
+ACTIVE: Final[str] = "ACTIVE"  # heartbeat received; eligible for commands
+OFFLINE: Final[str] = "OFFLINE"  # declared dead (timeout or LWT)

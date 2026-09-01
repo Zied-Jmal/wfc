@@ -5,7 +5,6 @@ from __future__ import annotations
 import threading
 import time
 
-
 from core.utils.logger import log
 
 
@@ -26,7 +25,7 @@ class ElectionState:
         self._won = False
         self._election_start_time: float | None = None
 
-# PUBLIC API
+    # PUBLIC API
 
     @property
     def term(self) -> int:

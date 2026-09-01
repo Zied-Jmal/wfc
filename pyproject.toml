@@ -16,6 +16,8 @@ select = [
 ignore = [
     "E501",   # line too long (handled by formatter)
     "B008",   # function call in default argument (FastAPI Depends)
+    "RUF002", # ambiguous unicode in docstrings (legitimate math symbols: σ, ×, −)
+    "RUF003", # ambiguous unicode in comments (legitimate math symbols)
 ]
 
 [tool.ruff.lint.isort]

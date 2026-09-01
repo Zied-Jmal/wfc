@@ -26,6 +26,10 @@ jobs:
         with:
           python-version: "3.14"
       - run: pip install pyright
+      - run: pip install -e wfc_shared
+      - run: pip install -r Swarm_Repo/requirements-dev.txt
+      - run: pip install -r Commander_Repo/requirements-dev.txt
+      - run: pip install -r Dashboard_Repo/requirements-dev.txt
       - run: pyright
 
   test-unit:

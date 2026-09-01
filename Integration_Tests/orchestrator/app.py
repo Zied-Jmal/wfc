@@ -12,40 +12,63 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from orchestrator.engine import Scenario, ScenarioRunner, RunReport
+from orchestrator.engine import RunReport, Scenario, ScenarioRunner
 from orchestrator.mqtt_bus import MQTTBus
-
 from orchestrator.scenarios.scenario_1_fire_dispatch import build as build_s1
 from orchestrator.scenarios.scenario_2_telemetry_aggregation import build as build_s2
 from orchestrator.scenarios.scenario_3_leader_election import build as build_s3
 from orchestrator.scenarios.scenario_4_approval_gate import build as build_s4
 from orchestrator.scenarios.scenario_5_node_lifecycle import build as build_s5
 
-
 app: Final[FastAPI] = FastAPI(title="WFC Integration Test Orchestrator")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# Keep references to background asyncio tasks so they are not garbage-collected.
+_background_tasks: set[asyncio.Task[Any]] = set()
+
+
+def _spawn(coro: Any) -> None:
+    task = asyncio.ensure_future(coro)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+
 
 bus: Final[MQTTBus] = MQTTBus()
 
 SCENARIO_BUILDERS: Final[dict[str, Any]] = {
-    "fire_dispatch":          build_s1,
-    "telemetry_aggregation":  build_s2,
-    "leader_election":        build_s3,
-    "approval_gate":          build_s4,
-    "node_lifecycle":         build_s5,
+    "fire_dispatch": build_s1,
+    "telemetry_aggregation": build_s2,
+    "leader_election": build_s3,
+    "approval_gate": build_s4,
+    "node_lifecycle": build_s5,
 }
 
 SCENARIO_META: Final[list[dict[str, str]]] = [
-    {"id": "fire_dispatch", "title": "1. Fire Dispatch End-to-End",
-     "summary": "Sensor \u2192 Commander \u2192 Leader \u2192 Drone \u2192 Telemetry. The flagship flow."},
-    {"id": "telemetry_aggregation", "title": "2. Telemetry Aggregation & Dashboard",
-     "summary": "Synthetic drone telemetry \u2192 Leader snapshot \u2192 Dashboard REST/SSE."},
-    {"id": "leader_election", "title": "3. Leader Election Failover",
-     "summary": "Simulate leader death \u2192 Bully election \u2192 New leader resumes ops."},
-    {"id": "approval_gate", "title": "4. Human Approval Gate",
-     "summary": "High-risk command \u2192 ApprovalGate \u2192 Operator approves \u2192 Forwarded."},
-    {"id": "node_lifecycle", "title": "5. Node Lifecycle & LWT Crash Detection",
-     "summary": "Fake node joins, heartbeats, crashes ungracefully \u2192 LWT \u2192 Dashboard reflects OFFLINE."},
+    {
+        "id": "fire_dispatch",
+        "title": "1. Fire Dispatch End-to-End",
+        "summary": "Sensor \u2192 Commander \u2192 Leader \u2192 Drone \u2192 Telemetry. The flagship flow.",
+    },
+    {
+        "id": "telemetry_aggregation",
+        "title": "2. Telemetry Aggregation & Dashboard",
+        "summary": "Synthetic drone telemetry \u2192 Leader snapshot \u2192 Dashboard REST/SSE.",
+    },
+    {
+        "id": "leader_election",
+        "title": "3. Leader Election Failover",
+        "summary": "Simulate leader death \u2192 Bully election \u2192 New leader resumes ops.",
+    },
+    {
+        "id": "approval_gate",
+        "title": "4. Human Approval Gate",
+        "summary": "High-risk command \u2192 ApprovalGate \u2192 Operator approves \u2192 Forwarded.",
+    },
+    {
+        "id": "node_lifecycle",
+        "title": "5. Node Lifecycle & LWT Crash Detection",
+        "summary": "Fake node joins, heartbeats, crashes ungracefully \u2192 LWT \u2192 Dashboard reflects OFFLINE.",
+    },
 ]
 
 _active_runners: dict[str, ScenarioRunner] = {}
@@ -73,6 +96,7 @@ async def startup() -> None:
 
 
 # REST API
+
 
 @app.get("/api/scenarios")
 async def list_scenarios() -> list[dict[str, str]]:
@@ -131,7 +155,7 @@ async def start_run(req: RunRequest) -> dict[str, str]:
         finally:
             _active_runners.pop(runner.report.run_id, None)
 
-    asyncio.create_task(_drive())
+    _spawn(_drive())
     return {"run_id": runner.report.run_id, "scenario_id": scenario.scenario_id}
 
 
@@ -155,19 +179,30 @@ async def abort_run(req: AbortRequest) -> dict[str, bool | str]:
 
 # WebSocket (live stream for the UI)
 
+
 @app.websocket("/ws")
 async def ws_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
     _ws_clients.append(websocket)
     try:
-        await websocket.send_text(json.dumps({
-            "type": "broker_status", "connected": bus.connected,
-        }))
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "broker_status",
+                    "connected": bus.connected,
+                }
+            )
+        )
         while True:
             await asyncio.sleep(2)
-            await websocket.send_text(json.dumps({
-                "type": "broker_status", "connected": bus.connected,
-            }))
+            await websocket.send_text(
+                json.dumps(
+                    {
+                        "type": "broker_status",
+                        "connected": bus.connected,
+                    }
+                )
+            )
     except WebSocketDisconnect:
         pass
     finally:
@@ -205,7 +240,7 @@ async def _transcript_pump() -> None:
 
 @app.on_event("startup")  # pyright: ignore[reportDeprecated]
 async def start_transcript_pump() -> None:
-    asyncio.create_task(_transcript_pump())
+    _spawn(_transcript_pump())
 
 
 # Static UI

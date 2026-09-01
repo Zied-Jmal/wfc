@@ -16,9 +16,9 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from core.messaging.mqtt_client import MQTTClient
 from core.heartbeat.heartbeat import Heartbeat
 from core.heartbeat.monitor import HeartbeatMonitor
+from core.messaging.mqtt_client import MQTTClient
 from core.node_registry.registry import NodeRegistry
 from core.persistence.database import get_db  # pyright: ignore[reportUnknownVariableType]
 from core.utils.config import get_db_path
@@ -26,11 +26,10 @@ from core.utils.logger import log
 from wfc_shared.enums.topics import WFC_ALL, registry_announce_topic
 from wfc_shared.schemas.announcements import NodeAnnouncement
 
-
 # region  CLASS - BaseNode
 
-class BaseNode:
 
+class BaseNode:
     """Abstract base class for all node types in the WFC system.
     Subclasses override handle_message(), _on_node_failed(),
     and _on_node_recovered() to implement their own logic.
@@ -40,23 +39,23 @@ class BaseNode:
 
     def __init__(
         self,
-        node_id:      str,
-        node_type:    str,
-        capabilities: list[str]                  | None = None,
-        zone:         str                        | None = None,
-        location:     tuple[float, float]        | None = None,
+        node_id: str,
+        node_type: str,
+        capabilities: list[str] | None = None,
+        zone: str | None = None,
+        location: tuple[float, float] | None = None,
     ):
-        self.node_id      = node_id
-        self.node_type    = node_type
+        self.node_id = node_id
+        self.node_type = node_type
         self.capabilities = capabilities or []
-        self.zone         = zone
-        self.location     = location
+        self.zone = zone
+        self.location = location
 
-        self.db        = get_db(get_db_path())
-        self.registry  = NodeRegistry(db=self.db)
-        self.mqtt      = MQTTClient(client_id=node_id)
+        self.db = get_db(get_db_path())
+        self.registry = NodeRegistry(db=self.db)
+        self.mqtt = MQTTClient(client_id=node_id)
         self.heartbeat = Heartbeat(interval=5)
-        self.monitor   = HeartbeatMonitor(
+        self.monitor = HeartbeatMonitor(
             timeout=10,
             registry=self.registry,
             on_node_failed=self._on_node_failed,
@@ -181,12 +180,15 @@ class BaseNode:
         )
 
     def _send_heartbeat(self) -> None:
-        self.mqtt.publish(f"wfc/nodes/{self.node_id}/heartbeat", {
-            "node_id":   self.node_id,
-            "type":      self.node_type,
-            "timestamp": time.time(),
-            "status":    "alive",
-        })
+        self.mqtt.publish(
+            f"wfc/nodes/{self.node_id}/heartbeat",
+            {
+                "node_id": self.node_id,
+                "type": self.node_type,
+                "timestamp": time.time(),
+                "status": "alive",
+            },
+        )
 
     def _on_message(self, topic: str, payload: dict[str, Any] | str) -> None:
         if "heartbeat" in topic and isinstance(payload, dict):
@@ -196,5 +198,6 @@ class BaseNode:
         self.handle_message(topic, payload)
 
     # endregion
+
 
 # endregion (end of class BaseNode)

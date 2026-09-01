@@ -29,6 +29,7 @@ stages B-E will correctly time out, telling you immediately that no
 backup is configured \u2014 not that election logic is broken.
 
 """
+
 from __future__ import annotations
 
 import time
@@ -41,15 +42,18 @@ def build(zone: str = "zone_alpha", target_leader_id: str = "sl-A-01") -> Scenar
 
     def spoof_leader_offline(ctx: dict[str, Any]) -> dict[str, Any]:
         payload: dict[str, Any] = {
-            "node_id":      target_leader_id,
-            "node_type":    "SWARM_LEADER",
+            "node_id": target_leader_id,
+            "node_type": "SWARM_LEADER",
             "capabilities": [],
-            "status":       "OFFLINE",
+            "status": "OFFLINE",
             "announced_at": time.time(),
-            "zone":         zone,
+            "zone": zone,
         }
         ctx["_publish_now"] = (
-            f"wfc/registry/announce/{target_leader_id}", payload, 1, True,
+            f"wfc/registry/announce/{target_leader_id}",
+            payload,
+            1,
+            True,
         )
         return {"offline_spoofed_at": time.time()}
 

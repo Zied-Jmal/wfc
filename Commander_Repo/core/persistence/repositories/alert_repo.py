@@ -10,18 +10,16 @@ node down, command failed)
 from __future__ import annotations
 
 # Standard Library
-
 import time
 from typing import Any
 
 # Project Imports
-
 from core.persistence.database import Database
 
 # region  CLASS - AlertRepository
 
-class AlertRepository:
 
+class AlertRepository:
     """Persistence layer for control-room alerts.
 
     Alerts are idempotent on alert_id - the same node-down event
@@ -30,7 +28,7 @@ class AlertRepository:
 
     # region  INITIALISATION
 
-    def __init__(self, db: Database)  -> None:
+    def __init__(self, db: Database) -> None:
         self._db = db
 
     # endregion
@@ -96,17 +94,18 @@ class AlertRepository:
     def _row_to_dict(row: Any) -> dict[str, Any]:
         """Convert a SQLite row to the canonical alert dict shape."""
         return {
-            "alert_id":   row["alert_id"],
-            "kind":       row["kind"],
-            "severity":   row["severity"],
-            "title":      row["title"],
-            "detail":     row["detail"],
+            "alert_id": row["alert_id"],
+            "kind": row["kind"],
+            "severity": row["severity"],
+            "title": row["title"],
+            "detail": row["detail"],
             "source_ref": row["source_ref"],
             "created_at": row["created_at"],
-            "acked_at":   row["acked_at"],
-            "acked_by":   row["acked_by"],
+            "acked_at": row["acked_at"],
+            "acked_by": row["acked_by"],
         }
 
     # endregion
+
 
 # endregion

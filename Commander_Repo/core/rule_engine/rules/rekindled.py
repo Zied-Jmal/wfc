@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from core.rule_engine.rule import Rule, RuleResult
-from core.rule_engine.context import RuleContext
 from core.node_registry.registry import NodeRegistry
-from core.state.fire_state_store import FireRecord
-from wfc_shared.enums.fire_status import SUPPRESSED, EXTINGUISHED, ACTIVE
+from core.rule_engine.context import RuleContext
+from core.rule_engine.rule import Rule, RuleResult
 from core.rule_engine.trigger import EvalTrigger
+from core.state.fire_state_store import FireRecord
+from wfc_shared.enums.fire_status import ACTIVE, EXTINGUISHED, SUPPRESSED
+
 
 class RekindleDetectionRule(Rule):
     """Re-ignites fire if REKINDLED event arrives."""
@@ -26,6 +27,6 @@ class RekindleDetectionRule(Rule):
             reason="fire_rekindled",
             state_updates={
                 "state": ACTIVE,
-                "rekindled_at": context._rekindled_payload.get("timestamp")  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess, reportUnknownMemberType]
-            }
+                "rekindled_at": context._rekindled_payload.get("timestamp"),  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess, reportUnknownMemberType]
+            },
         )

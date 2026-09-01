@@ -4,9 +4,10 @@
 # MissionStore) remain the "state for speed" half.
 from __future__ import annotations
 
-from core.persistence.repositories.domain_event_repo import DomainEventRepository
 from core.persistence.database import Database
+from core.persistence.repositories.domain_event_repo import DomainEventRepository
 from wfc_shared.schemas.domain_event import DomainEvent
+
 
 class DomainEventLog:
     """Append-only log of all commander domain events.
@@ -25,10 +26,10 @@ class DomainEventLog:
       - State reconstruction: replay all events on startup (Step 4).
     """
 
-    def __init__(self, db: Database)  -> None:
+    def __init__(self, db: Database) -> None:
         self._repo = DomainEventRepository(db)
 
-# WRITE
+    # WRITE
 
     def append(self, event: DomainEvent) -> DomainEvent:
         """Write an event to the log.  Returns the event with .sequence set.
@@ -37,15 +38,13 @@ class DomainEventLog:
         """
         return self._repo.insert(event)
 
-# READ - per-fire
+    # READ - per-fire
 
     def get_for_fire(self, fire_id: str) -> list[DomainEvent]:
         """All events for a fire, oldest-first."""
         return self._repo.get_by_fire_id(fire_id)
 
-    def get_last_for_fire(
-        self, fire_id: str, event_type: str | None = None
-    ) -> DomainEvent | None:
+    def get_last_for_fire(self, fire_id: str, event_type: str | None = None) -> DomainEvent | None:
         """Last event for a fire, optionally filtered by type."""
         return self._repo.get_last(fire_id, event_type)
 

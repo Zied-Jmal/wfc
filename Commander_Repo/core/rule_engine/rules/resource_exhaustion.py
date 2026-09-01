@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from core.rule_engine.rule import Rule, RuleResult
-from core.rule_engine.context import RuleContext
 from core.node_registry.registry import NodeRegistry
-from core.state.fire_state_store import FireRecord
-from wfc_shared.schemas.commands import Command
-from wfc_shared.enums.command_types import STAND_DOWN, REINFORCE_FIRE, ESCALATE_FIRE
+from core.rule_engine.context import RuleContext
+from core.rule_engine.rule import Rule, RuleResult
 from core.rule_engine.trigger import EvalTrigger
+from core.state.fire_state_store import FireRecord
+from wfc_shared.enums.command_types import ESCALATE_FIRE, REINFORCE_FIRE, STAND_DOWN
+from wfc_shared.schemas.commands import Command
+
 
 class ResourceExhaustionRule(Rule):
     """Rotates swarm if payload is nearly empty."""
@@ -31,19 +32,21 @@ class ResourceExhaustionRule(Rule):
                         Command(
                             target_node=lid,
                             command_type=STAND_DOWN,  # pyright: ignore[reportArgumentType]
-                            payload={"fire_id": fire.fire_id}
+                            payload={"fire_id": fire.fire_id},
                         )
                     )
                 # Find fresh leader
-                fresh = [n for n in registry.get_all().values() 
-                         if "SWARM_LEAD" in n.capabilities and n.status == "ACTIVE"
-                         and n.node_id not in fire.assigned_nodes]
+                fresh = [
+                    n
+                    for n in registry.get_all().values()
+                    if "SWARM_LEAD" in n.capabilities and n.status == "ACTIVE" and n.node_id not in fire.assigned_nodes
+                ]
                 if fresh:
                     commands.append(  # pyright: ignore[reportUnknownMemberType]
                         Command(
                             target_node=fresh[0].node_id,  # pyright: ignore[reportAttributeAccessIssue, reportUnknownArgumentType, reportUnknownMemberType]
                             command_type=REINFORCE_FIRE,  # pyright: ignore[reportArgumentType]
-                            payload={"fire_id": fire.fire_id}
+                            payload={"fire_id": fire.fire_id},
                         )
                     )
                 else:
@@ -51,12 +54,12 @@ class ResourceExhaustionRule(Rule):
                         Command(
                             target_node="SYSTEM",
                             command_type=ESCALATE_FIRE,  # pyright: ignore[reportArgumentType]
-                            payload={"fire_id": fire.fire_id}
+                            payload={"fire_id": fire.fire_id},
                         )
                     )
                 return RuleResult(
                     triggered=True,
                     reason="resource_exhaustion",
-                    commands=commands  # pyright: ignore[reportUnknownArgumentType]
+                    commands=commands,  # pyright: ignore[reportUnknownArgumentType]
                 )
         return RuleResult(triggered=False, reason="payload_sufficient")

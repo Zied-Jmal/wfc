@@ -11,6 +11,8 @@ RUN pip install -e /wfc_shared
 
 COPY ./Commander_Repo .
 
+RUN mkdir -p /app/data && chown -R app:app /app/data
+
 USER app
 
 CMD ["python", "-m", "command_nodes.central.main"]

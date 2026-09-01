@@ -13,11 +13,11 @@ MAP_PORT: Final[int] = int(os.getenv("MAP_PORT", "8081"))
 
 
 async def main() -> None:
-    from dashboard.server      import app
-    from dashboard.map_server  import map_app
+    from dashboard.map_server import map_app
+    from dashboard.server import app
 
-    cfg_dash = uvicorn.Config(app,      host="0.0.0.0", port=DASHBOARD_PORT, log_level="info")
-    cfg_map  = uvicorn.Config(map_app,  host="0.0.0.0", port=MAP_PORT,       log_level="info")
+    cfg_dash = uvicorn.Config(app, host="0.0.0.0", port=DASHBOARD_PORT, log_level="info")
+    cfg_map = uvicorn.Config(map_app, host="0.0.0.0", port=MAP_PORT, log_level="info")
 
     await asyncio.gather(
         uvicorn.Server(cfg_dash).serve(),

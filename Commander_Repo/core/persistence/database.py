@@ -14,7 +14,6 @@ Why SQLite:
 from __future__ import annotations
 
 # Standard Library
-
 import os
 import sqlite3
 import threading
@@ -23,7 +22,6 @@ from pathlib import Path
 from typing import Any, Final
 
 # Project Imports
-
 from core.utils.logger import log
 
 # region  SCHEMA
@@ -46,10 +44,10 @@ from core.utils.logger import log
 # executemany(), for the rare case that even busy_timeout is
 # exceeded (e.g. a long external lock).
 
-SQLITE_BUSY_TIMEOUT_MS = 10_000   # passed to PRAGMA busy_timeout
-SQLITE_CONNECT_TIMEOUT = 30.0     # seconds, passed to sqlite3.connect()
+SQLITE_BUSY_TIMEOUT_MS = 10_000  # passed to PRAGMA busy_timeout
+SQLITE_CONNECT_TIMEOUT = 30.0  # seconds, passed to sqlite3.connect()
 LOCKED_RETRY_ATTEMPTS: Final = 5
-LOCKED_RETRY_BASE_DELAY = 0.05    # seconds, doubles each retry
+LOCKED_RETRY_BASE_DELAY = 0.05  # seconds, doubles each retry
 
 # endregion
 
@@ -193,6 +191,7 @@ CREATE INDEX IF NOT EXISTS idx_de_timestamp  ON domain_events(timestamp);
 
 # region  CLASS - Database
 
+
 class Database:
     """Thin wrapper around a single SQLite connection.
 
@@ -221,10 +220,12 @@ class Database:
 
     def _init_schema(self) -> None:
         with self._lock:
-            self._retry_locked(lambda: (
-                self._conn.executescript(SCHEMA),
-                self._conn.commit(),
-            ))
+            self._retry_locked(
+                lambda: (
+                    self._conn.executescript(SCHEMA),
+                    self._conn.commit(),
+                )
+            )
 
     def _migrate(self) -> None:
         """Forward-only migrations for existing databases.
@@ -236,7 +237,7 @@ class Database:
             self._conn.commit()
             log("Database", "migration: added nodes.current_job column", channel="SYSTEM")
 
-# create fire_states table if it doesn't exist
+        # create fire_states table if it doesn't exist
         tables = {row[0] for row in self._conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         if "fire_states" not in tables:
             self._conn.executescript("""
@@ -259,7 +260,7 @@ class Database:
             self._conn.commit()
             log("Database", "migration: created fire_states table", channel="SYSTEM")
 
-# create missions table if it doesn't exist
+        # create missions table if it doesn't exist
         if "missions" not in tables:
             self._conn.executescript("""
                 CREATE TABLE IF NOT EXISTS missions (
@@ -277,8 +278,8 @@ class Database:
             self._conn.commit()
             log("Database", "migration: created missions table", channel="SYSTEM")
 
-# create domain_events table if it doesn't exist
-# (for databases created before the hybrid event-sourcing migration)
+        # create domain_events table if it doesn't exist
+        # (for databases created before the hybrid event-sourcing migration)
         if "domain_events" not in tables:
             self._conn.executescript("""
                 CREATE TABLE IF NOT EXISTS domain_events (
@@ -299,13 +300,13 @@ class Database:
             self._conn.commit()
             log("Database", "migration: created domain_events table", channel="SYSTEM")
 
-# nodes.updated_at was written on every heartbeat but
-# never read by any query, rule, or snapshot merge - pure write overhead.
-# node_repo.py no longer writes it. Drop the column
-# from existing databases so the dead write can never reappear.
-# SQLite supports DROP COLUMN since 3.35.0 (2021-03). If the runtime
-# SQLite is older, the ALTER TABLE will raise - we catch and log rather
-# than crashing startup, since the column being present is harmless.
+        # nodes.updated_at was written on every heartbeat but
+        # never read by any query, rule, or snapshot merge - pure write overhead.
+        # node_repo.py no longer writes it. Drop the column
+        # from existing databases so the dead write can never reappear.
+        # SQLite supports DROP COLUMN since 3.35.0 (2021-03). If the runtime
+        # SQLite is older, the ALTER TABLE will raise - we catch and log rather
+        # than crashing startup, since the column being present is harmless.
         node_cols = {row[1] for row in self._conn.execute("PRAGMA table_info(nodes)")}
         if "updated_at" in node_cols:
             try:
@@ -313,11 +314,13 @@ class Database:
                 self._conn.commit()
                 log("Database", "migration: dropped nodes.updated_at (dead column)", channel="SYSTEM")
             except Exception as exc:
-                log("Database",
+                log(
+                    "Database",
                     f"migration: could not drop nodes.updated_at (SQLite may be < 3.35): {exc}",
-                    channel="SYSTEM")
+                    channel="SYSTEM",
+                )
 
-# RETRY HELPER
+    # RETRY HELPER
 
     @staticmethod
     def _retry_locked(fn: Any):
@@ -346,25 +349,29 @@ class Database:
                 time.sleep(delay)
                 delay *= 2
 
-# PUBLIC API
+    # PUBLIC API
 
     def execute(self, sql: str, params: tuple[Any, ...] = ()) -> sqlite3.Cursor:
         """Execute a single statement and commit. Thread-safe.
         Retries with backoff if the database is transiently locked.
         """
         with self._lock:
+
             def _run():
                 cur = self._conn.execute(sql, params)  # pyright: ignore[reportUnknownArgumentType]
                 self._conn.commit()
                 return cur
+
             return self._retry_locked(_run)  # pyright: ignore[reportReturnType]
 
     def executemany(self, sql: str, seq_of_params: Any) -> sqlite3.Cursor:
         with self._lock:
+
             def _run():
                 cur = self._conn.executemany(sql, seq_of_params)
                 self._conn.commit()
                 return cur
+
             return self._retry_locked(_run)  # pyright: ignore[reportReturnType]
 
     def query(self, sql: str, params: tuple[Any, ...] = ()) -> list[sqlite3.Row]:
@@ -381,6 +388,7 @@ class Database:
     def close(self) -> None:
         with self._lock:
             self._conn.close()
+
 
 # endregion
 
@@ -400,6 +408,7 @@ class Database:
 
 _db_cache: dict[str, Database] = {}
 _cache_lock = threading.Lock()
+
 
 def get_db(path: str | os.PathLike[str] | None = None) -> Database:
     """Return a shared Database instance for the given path, opening
@@ -422,6 +431,7 @@ def get_db(path: str | os.PathLike[str] | None = None) -> Database:
             _db_cache[key] = db
         return db
 
+
 def reset_db(path: str | os.PathLike[str] | None = None) -> None:
     """Close and evict cached Database instance(s).
 
@@ -441,5 +451,6 @@ def reset_db(path: str | os.PathLike[str] | None = None) -> None:
         for db in _db_cache.values():
             db.close()
         _db_cache.clear()
+
 
 # endregion

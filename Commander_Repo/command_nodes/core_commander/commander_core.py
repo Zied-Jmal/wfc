@@ -1,4 +1,3 @@
-
 """commander_core.py
 CommanderCore - reusable commander subsystem
 Does NOT inherit from BaseNode. Owns all commander-specific
@@ -31,64 +30,75 @@ MQTTClient, NodeRegistry, Database
 
 from __future__ import annotations
 
-
+import contextlib
 import threading
 import time
+from typing import Any, Final
 
-
-
-from core.state.swarm_status_store import SwarmStatusStore
-from core.rule_engine.context import RuleContext
-from core.rule_engine.trigger import EvalTrigger
-from wfc_shared.schemas.telemetry import SwarmStatusSnapshot, FireIntensityUpdate
-from wfc_shared.enums.topics import SWARM_STATUS_PREFIX, SWARM_ELECTION_PREFIX, FIRE_INTENSITY
-from wfc_shared.enums.topics import SWARM_STATUS_SUB, SWARM_ELECTION_SUB
-
-from wfc_shared.enums.topics import FIRE_REKINDLED_TOPIC, FIRE_VERIFIED_TOPIC
-from wfc_shared.enums.events import FIRE_INTENSITY_UPDATE, FIRE_REKINDLED, FIRE_VERIFIED  # pyright: ignore[reportUnusedImport]
-from wfc_shared.enums.domain_event_types import LEADER_REPLACED
-
-from core.commands_monitor.command_tracker import CommandTracker
-from core.commands_monitor.command_dispatcher import CommandDispatcher
-from core.commands_monitor.lifecycle_rules import STATUS_TO_EVENT_TYPE
-from core.messaging.registry_bridge import RegistryBridge
-from core.messaging.mqtt_client import MQTTClient
-from core.rule_engine.engine import RuleEngine
-from core.node_registry.registry import NodeRegistry
-from core.persistence.database import Database
-from core.approval.pending_store import PendingCommandStore
 from core.approval.approval_gate import ApprovalGate
 from core.approval.approval_handler import ApprovalHandler
+from core.approval.pending_store import PendingCommandStore
+from core.commands_monitor.command_dispatcher import CommandDispatcher
+from core.commands_monitor.command_tracker import CommandTracker
+from core.commands_monitor.lifecycle_rules import STATUS_TO_EVENT_TYPE
+from core.messaging.mqtt_client import MQTTClient
+from core.messaging.registry_bridge import RegistryBridge
+from core.node_registry.registry import NodeRegistry
+from core.persistence.database import Database
 from core.persistence.repositories.alert_repo import AlertRepository
 from core.persistence.repositories.fire_event_repo import FireEventRepository
+from core.rule_engine.context import RuleContext
+from core.rule_engine.engine import RuleEngine
+from core.rule_engine.trigger import EvalTrigger
+from core.state.domain_event_log import DomainEventLog
 from core.state.fire_state_store import FireStateStore
 from core.state.mission_store import MissionStore
-from core.state.domain_event_log import DomainEventLog
-from wfc_shared.schemas.events import FireEvent
-from wfc_shared.schemas.domain_event import DomainEvent
+from core.state.swarm_status_store import SwarmStatusStore
+from core.utils.logger import log
+from wfc_shared.enums.capabilities import SWARM_LEAD
 from wfc_shared.enums.domain_event_types import (
-    FIRE_DETECTED as DE_FIRE_DETECTED,
-    FIRE_CONTAINED as DE_FIRE_CONTAINED,
-    FIRE_SUPPRESSED as DE_FIRE_SUPPRESSED,
-    FIRE_REDISPATCHED,
-    LEADER_DIED,
-    COMMAND_ACK_RECEIVED,
     COMMAND_ACK_EXECUTED,
     COMMAND_ACK_FAILED,
+    COMMAND_ACK_RECEIVED,
+    FIRE_REDISPATCHED,
+    LEADER_DIED,
+    LEADER_REPLACED,
     NODE_BECAME_AVAILABLE,
 )
-
-
-from wfc_shared.enums.topics import (
-    ACK, APPROVAL_RESPONSE, EVENTS_FIRE, REGISTRY_ANNOUNCE_TARGET,
-    STATE_SNAPSHOT, SYSTEM_LEASE,
+from wfc_shared.enums.domain_event_types import (
+    FIRE_CONTAINED as DE_FIRE_CONTAINED,
 )
-from wfc_shared.enums.capabilities import SWARM_LEAD
-from wfc_shared.enums.events import FIRE_DETECTED, FIRE_CONTAINED, FIRE_SUPPRESSED
+from wfc_shared.enums.domain_event_types import (
+    FIRE_DETECTED as DE_FIRE_DETECTED,
+)
+from wfc_shared.enums.domain_event_types import (
+    FIRE_SUPPRESSED as DE_FIRE_SUPPRESSED,
+)
+from wfc_shared.enums.events import (  # pyright: ignore[reportUnusedImport]
+    FIRE_CONTAINED,
+    FIRE_DETECTED,
+    FIRE_SUPPRESSED,
+)
 from wfc_shared.enums.fire_status import ACTIVE, CONTAINED, SUPPRESSED
-from wfc_shared.enums.mission_status import ASSIGNED, RUNNING, COMPLETED
-from typing import Any, Final
-from core.utils.logger import log
+from wfc_shared.enums.mission_status import ASSIGNED, COMPLETED, RUNNING
+from wfc_shared.enums.topics import (
+    ACK,
+    APPROVAL_RESPONSE,
+    EVENTS_FIRE,
+    FIRE_INTENSITY,
+    FIRE_REKINDLED_TOPIC,
+    FIRE_VERIFIED_TOPIC,
+    REGISTRY_ANNOUNCE_TARGET,
+    STATE_SNAPSHOT,
+    SWARM_ELECTION_PREFIX,
+    SWARM_ELECTION_SUB,
+    SWARM_STATUS_PREFIX,
+    SWARM_STATUS_SUB,
+    SYSTEM_LEASE,
+)
+from wfc_shared.schemas.domain_event import DomainEvent
+from wfc_shared.schemas.events import FireEvent
+from wfc_shared.schemas.telemetry import FireIntensityUpdate, SwarmStatusSnapshot
 
 # prefix used to recognize ANY per-node registry-announce
 # topic (wfc/registry/announce/{node_id}) - announcements moved off
@@ -105,7 +115,7 @@ LEASE_RENEW_SECONDS: Final = 5.0
 # signal - see _check_lease_and_maybe_promote().
 LEASE_TTL_SECONDS: Final = 15.0
 
-STATE_SNAPSHOT_TOPIC   = STATE_SNAPSHOT
+STATE_SNAPSHOT_TOPIC = STATE_SNAPSHOT
 
 # 30s gives the loop guaranteed time to publish at least two more
 # snapshots after deactivate() before the grace expires, ensuring
@@ -116,6 +126,7 @@ GRACE_PERIOD_SECONDS: Final = 30.0
 
 
 # region  CLASS - CommanderCore
+
 
 class CommanderCore:
     """All commander-specific logic, decoupled from BaseNode.
@@ -137,38 +148,41 @@ class CommanderCore:
         registry : NodeRegistry - shared with the owning BaseNode
         db       : Database - shared with the owning BaseNode
         """
-        self._node_id  = node_id
-        self._mqtt     = mqtt
+        self._node_id = node_id
+        self._mqtt = mqtt
         self._registry = registry
-        self._db       = db
-        self._active   = False
+        self._db = db
+        self._active = False
 
-# state stores
-        self.fires    = FireStateStore(db=self._db)
+        # state stores
+        self.fires = FireStateStore(db=self._db)
         self.missions = MissionStore(db=db)
-        self.alerts   = AlertRepository(db=self._db)
+        self.alerts = AlertRepository(db=self._db)
 
-# sensor fire event log - records raw FIRE_DETECTED/
+        # sensor fire event log - records raw FIRE_DETECTED/
         #    CONTAINED/SUPPRESSED from field sensors, separate from the
-# commander domain event log which records decisions
+        # commander domain event log which records decisions
         self._fire_events = FireEventRepository(db=self._db)
 
-# domain event log (hybrid event sourcing)
+        # domain event log (hybrid event sourcing)
         self.event_log = DomainEventLog(db=self._db)
 
-# command pipeline
-        self.tracker    = CommandTracker(db=self._db)
+        # command pipeline
+        self.tracker = CommandTracker(db=self._db)
         self.dispatcher = CommandDispatcher(mqtt=self._mqtt, tracker=self.tracker)
 
-# approval pipeline
-        self._store   = PendingCommandStore(
-            self.dispatcher, mqtt=self._mqtt, node_id=self._node_id,
-            db=self._db, event_log=self.event_log,
+        # approval pipeline
+        self._store = PendingCommandStore(
+            self.dispatcher,
+            mqtt=self._mqtt,
+            node_id=self._node_id,
+            db=self._db,
+            event_log=self.event_log,
         )
-        self._gate    = ApprovalGate(self.dispatcher, self._store)
+        self._gate = ApprovalGate(self.dispatcher, self._store)
         self._handler = ApprovalHandler(self._store)
 
-# rule engine
+        # rule engine
         self.rule_engine = RuleEngine(
             registry=self._registry,
             gate=self._gate,
@@ -177,27 +191,28 @@ class CommanderCore:
             event_log=self.event_log,
         )
 
-# registry bridge (wired on start)
+        # registry bridge (wired on start)
         self._registry_bridge: RegistryBridge | None = None
 
-# leadership lease
+        # leadership lease
         # term we currently hold/believe is current; None until we've
         # either issued one ourselves or observed one on the wire.
         self._lease_term: int = 0
         self._lease_owner: str | None = None
         self._lease_since: float = 0.0
-        self._last_lease_seen_at: float = 0.0   # local clock, for TTL check
+        self._last_lease_seen_at: float = 0.0  # local clock, for TTL check
 
-# background loop control
+        # background loop control
         self._loops_running = False
-        
-# grace period for snapshot publish
+
+        # grace period for snapshot publish
         self._deactivation_grace_start: float | None = None
         self._last_snapshot_at: float = 0.0  # tracks when we last published a snapshot
 
-# SWARM :
+        # SWARM :
         self.swarm_status = SwarmStatusStore()
         self._last_election_metadata: dict[str, Any] | None = None
+
     # endregion
 
     # region  LIFECYCLE
@@ -226,7 +241,7 @@ class CommanderCore:
 
         # register NODE_BECAME_AVAILABLE callback on the registry
         # so domain events are written when SWARM_LEAD nodes become active.
-        self._registry._on_node_available = self._on_node_became_available
+        self._registry._on_node_available = self._on_node_became_available  # pyright: ignore[reportPrivateUsage]
 
         self._registry_bridge = RegistryBridge(self._mqtt, self._registry)
         self._registry_bridge.start()
@@ -245,9 +260,7 @@ class CommanderCore:
 
         # Always subscribe to snapshots - backup uses them to mirror state
         self._mqtt.subscribe(STATE_SNAPSHOT_TOPIC)
-        log("CommanderCore",
-            f"subscribed to {STATE_SNAPSHOT_TOPIC} ({self._node_id})",
-            channel="STATE")
+        log("CommanderCore", f"subscribed to {STATE_SNAPSHOT_TOPIC} ({self._node_id})", channel="STATE")
 
         # replay recent domain events on startup to fill any
         # state gaps that the fire_states/missions DB snapshot may have missed.
@@ -256,13 +269,12 @@ class CommanderCore:
         # looked stale from a clock skew), the event log replay will still apply it.
         try:
             from core.state.projector import FireProjector
+
             projector = FireProjector(self.fires, self.missions)
             recent_events = self.event_log.get_recent(limit=500)
             projector.replay(recent_events)
         except Exception as exc:
-            log("CommanderCore",
-                f"startup event replay failed (non-fatal): {exc}",
-                channel="SYSTEM")
+            log("CommanderCore", f"startup event replay failed (non-fatal): {exc}", channel="SYSTEM")
 
         self._loops_running = True
         threading.Thread(target=self._expire_loop, daemon=True).start()
@@ -276,10 +288,11 @@ class CommanderCore:
             self._claim_or_reclaim_lease()
             threading.Thread(target=self._snapshot_loop, daemon=True).start()
             threading.Thread(target=self._lease_renew_loop, daemon=True).start()
-            log("CommanderCore",
-                f"snapshot publish loop launched, first publish in "
-                f"{STATE_SNAPSHOT_SECONDS:.0f}s ({self._node_id})",
-                channel="STATE")
+            log(
+                "CommanderCore",
+                f"snapshot publish loop launched, first publish in {STATE_SNAPSHOT_SECONDS:.0f}s ({self._node_id})",
+                channel="STATE",
+            )
 
         mode = "ACTIVE" if active else "STANDBY"
         log("CommanderCore", f"started in {mode} mode ({self._node_id})", channel="SYSTEM")
@@ -303,19 +316,22 @@ class CommanderCore:
         if self._active:
             return
         self._active = True
-        self._lease_term  = max(self._lease_term, 1) + 1
+        self._lease_term = max(self._lease_term, 1) + 1
         self._lease_owner = self._node_id
         self._lease_since = time.time()
         self._publish_lease()
         threading.Thread(target=self._snapshot_loop, daemon=True).start()
         threading.Thread(target=self._lease_renew_loop, daemon=True).start()
-        log("CommanderCore",
-            f"snapshot publish loop launched, first publish in "
-            f"{STATE_SNAPSHOT_SECONDS:.0f}s ({self._node_id})",
-            channel="STATE")
-        log("CommanderCore",
+        log(
+            "CommanderCore",
+            f"snapshot publish loop launched, first publish in {STATE_SNAPSHOT_SECONDS:.0f}s ({self._node_id})",
+            channel="STATE",
+        )
+        log(
+            "CommanderCore",
             f"activated - now commanding, lease term={self._lease_term} ({self._node_id})",
-            channel="SYSTEM")
+            channel="SYSTEM",
+        )
 
     def deactivate(self) -> None:
         """
@@ -333,8 +349,7 @@ class CommanderCore:
         self._publish_snapshot_now()
         self._active = False
         self._deactivation_grace_start = time.time()
-        log("CommanderCore", f"deactivated - returning to standby ({self._node_id})",
-            channel="SYSTEM")
+        log("CommanderCore", f"deactivated - returning to standby ({self._node_id})", channel="SYSTEM")
 
     # endregion
 
@@ -358,22 +373,26 @@ class CommanderCore:
         # delivery, it means a node checking leadership could see no
         # lease at all and make the wrong call about whether to
         # reclaim or promote.
-        self._mqtt.publish_retained(SYSTEM_LEASE, {
-            "owner": self._lease_owner,
-            "term":  self._lease_term,
-            "since": self._lease_since,
-        }, qos=1)
+        self._mqtt.publish_retained(
+            SYSTEM_LEASE,
+            {
+                "owner": self._lease_owner,
+                "term": self._lease_term,
+                "since": self._lease_since,
+            },
+            qos=1,
+        )
 
     def _on_lease_message(self, payload: dict[str, Any]) -> None:
         """Record the latest lease state observed on the wire."""
-        term  = payload.get("term")
+        term = payload.get("term")
         owner = payload.get("owner")
         since = payload.get("since")
         if not isinstance(term, int):
             return
         self._last_lease_seen_at = time.time()
         if term >= self._lease_term:
-            self._lease_term  = term
+            self._lease_term = term
             self._lease_owner = owner
             self._lease_since = since or time.time()
 
@@ -393,13 +412,11 @@ class CommanderCore:
         visible, logged event, not a silent resume.
         """
         if self._lease_owner is None:
-            self._lease_term  = 1
+            self._lease_term = 1
             self._lease_owner = self._node_id
             self._lease_since = time.time()
             self._publish_lease()
-            log("CommanderCore",
-                f"no prior lease found - issuing term=1 ({self._node_id})",
-                channel="SYSTEM")
+            log("CommanderCore", f"no prior lease found - issuing term=1 ({self._node_id})", channel="SYSTEM")
             return
 
         if self._lease_owner == self._node_id:
@@ -409,14 +426,16 @@ class CommanderCore:
 
         # Someone else held it - reclaim.
         old_owner, old_term = self._lease_owner, self._lease_term
-        self._lease_term  = old_term + 1
+        self._lease_term = old_term + 1
         self._lease_owner = self._node_id
         self._lease_since = time.time()
         self._publish_lease()
-        log("CommanderCore",
+        log(
+            "CommanderCore",
             f"RECLAIMING leadership from {old_owner} (was term={old_term}) "
             f"- new term={self._lease_term} ({self._node_id})",
-            channel="SYSTEM")
+            channel="SYSTEM",
+        )
 
     def _check_lease_and_maybe_promote(self) -> bool:
         """
@@ -490,9 +509,7 @@ class CommanderCore:
 
             # State snapshot sync
             if topic == STATE_SNAPSHOT_TOPIC:
-                log("CommanderCore",
-                    f"snapshot received ({self._node_id}, active={self._active})",
-                    channel="STATE")
+                log("CommanderCore", f"snapshot received ({self._node_id}, active={self._active})", channel="STATE")
                 self._apply_snapshot(payload)  # pyright: ignore[reportUnknownArgumentType]
                 return
 
@@ -549,36 +566,42 @@ class CommanderCore:
                 return
 
             # Unknown topic (ignore silently)
-            log("CommanderCore",
-                f"unhandled topic: {topic} (active={self._active})",
-                channel="BUS", level="VERBOSE")
+            log("CommanderCore", f"unhandled topic: {topic} (active={self._active})", channel="BUS", level="VERBOSE")
 
         except Exception as e:
             log("CommanderCore", f"Unhandled error in handle_message: {e} (topic={topic})", channel="ERROR")
             import traceback
+
             log("CommanderCore", traceback.format_exc(), channel="ERROR")
+
     # endregion
 
     # region  FIRE EVENT HANDLER
     def _on_node_became_available(self, node_id: str, capabilities: list[str]) -> None:
         """Uses self.fires.get_active() instead of internal dict."""
-        log("CommanderCore", f"NODE_BECAME_AVAILABLE callback fired for {node_id} caps={capabilities}", channel="SYSTEM")
+        log(
+            "CommanderCore", f"NODE_BECAME_AVAILABLE callback fired for {node_id} caps={capabilities}", channel="SYSTEM"
+        )
         from wfc_shared.enums.capabilities import SWARM_LEAD
+
         if SWARM_LEAD not in (capabilities or []):
             return
 
-        self.event_log.append(DomainEvent(
-            event_type=NODE_BECAME_AVAILABLE,  # pyright: ignore[reportArgumentType]
-            node_id=node_id,
-            reason="node_became_active",
-            payload={"capabilities": capabilities},
-        ))
+        self.event_log.append(
+            DomainEvent(
+                event_type=NODE_BECAME_AVAILABLE,  # pyright: ignore[reportArgumentType]
+                node_id=node_id,
+                reason="node_became_active",
+                payload={"capabilities": capabilities},
+            )
+        )
 
         log("CommanderCore", f"Re-evaluating active unassigned fires after {node_id} became available", channel="RULES")
 
         # use get_active() instead of _fires.items()
         active_unassigned = [
-            fire for fire in self.fires.get_active()
+            fire
+            for fire in self.fires.get_active()
             if not fire.assigned_nodes  # empty list = unassigned
         ]
 
@@ -589,12 +612,12 @@ class CommanderCore:
         for fire in active_unassigned:
             try:
                 context = self._build_context(  # pyright: ignore[reportUnknownMemberType]
-                    trigger=EvalTrigger.NODE_AVAILABLE,
-                    telemetry_rules=["fire_dispatch", "no_responders"]
+                    trigger=EvalTrigger.NODE_AVAILABLE, telemetry_rules=["fire_dispatch", "no_responders"]
                 )
                 self.rule_engine.evaluate(fire, context)
             except Exception as e:
                 log("CommanderCore", f"Error evaluating fire {fire.fire_id}: {e}", channel="ERROR")
+
     # endregion
 
     def _handle_fire_event(self, event: FireEvent) -> None:
@@ -622,11 +645,13 @@ class CommanderCore:
             mission = self.missions.create(p.fire_id)
 
             # write FIRE_DETECTED domain event for audit trail
-            self.event_log.append(DomainEvent(
-                event_type=DE_FIRE_DETECTED,  # pyright: ignore[reportArgumentType]
-                fire_id=p.fire_id,
-                payload={"zone": p.zone, "severity": p.severity, "sensor_id": p.sensor_id},
-            ))
+            self.event_log.append(
+                DomainEvent(
+                    event_type=DE_FIRE_DETECTED,  # pyright: ignore[reportArgumentType]
+                    fire_id=p.fire_id,
+                    payload={"zone": p.zone, "severity": p.severity, "sensor_id": p.sensor_id},
+                )
+            )
 
             fire = self.fires.get(p.fire_id)
 
@@ -636,26 +661,23 @@ class CommanderCore:
 
             # use get_available() not get_by_capability().
             if self._registry.get_available(SWARM_LEAD):
-                self.missions.transition(
-                    mission.mission_id, ASSIGNED,
-                    reason="swarm_leader_dispatched"
-                )
+                self.missions.transition(mission.mission_id, ASSIGNED, reason="swarm_leader_dispatched")
 
         elif event.event_type == FIRE_CONTAINED:
             fire = self.fires.get(p.fire_id)
             if fire is None:
-                log("CommanderCore",
-                    f"FIRE_CONTAINED for unknown fire {p.fire_id[:8]} - ignoring",
-                    channel="STATE")
+                log("CommanderCore", f"FIRE_CONTAINED for unknown fire {p.fire_id[:8]} - ignoring", channel="STATE")
                 return
             # persist raw sensor event
             self._fire_events.add(event)
             self.fires.transition(p.fire_id, CONTAINED, reason="contained_event")
             # write FIRE_CONTAINED domain event
-            self.event_log.append(DomainEvent(
-                event_type=DE_FIRE_CONTAINED,  # pyright: ignore[reportArgumentType]
-                fire_id=p.fire_id,
-            ))
+            self.event_log.append(
+                DomainEvent(
+                    event_type=DE_FIRE_CONTAINED,  # pyright: ignore[reportArgumentType]
+                    fire_id=p.fire_id,
+                )
+            )
             fire = self.fires.get(p.fire_id)
             # Use MANUAL trigger for state-change evaluations
             context = self._build_context(trigger=EvalTrigger.MANUAL)  # pyright: ignore[reportUnknownMemberType]
@@ -664,9 +686,7 @@ class CommanderCore:
         elif event.event_type == FIRE_SUPPRESSED:
             fire = self.fires.get(p.fire_id)
             if fire is None:
-                log("CommanderCore",
-                    f"FIRE_SUPPRESSED for unknown fire {p.fire_id[:8]} - ignoring",
-                    channel="STATE")
+                log("CommanderCore", f"FIRE_SUPPRESSED for unknown fire {p.fire_id[:8]} - ignoring", channel="STATE")
                 return
             self._fire_events.add(event)
             # release the assigned node's job IMMEDIATELY on FIRE_SUPPRESSED
@@ -674,24 +694,29 @@ class CommanderCore:
                 self._registry.release_job(fire.assigned_node)
             self.fires.transition(p.fire_id, SUPPRESSED, reason="suppressed_event")
             # write FIRE_SUPPRESSED domain event
-            self.event_log.append(DomainEvent(
-                event_type=DE_FIRE_SUPPRESSED,  # pyright: ignore[reportArgumentType]
-                fire_id=p.fire_id,
-            ))
+            self.event_log.append(
+                DomainEvent(
+                    event_type=DE_FIRE_SUPPRESSED,  # pyright: ignore[reportArgumentType]
+                    fire_id=p.fire_id,
+                )
+            )
             fire = self.fires.get(p.fire_id)
             context = self._build_context(trigger=EvalTrigger.MANUAL)  # pyright: ignore[reportUnknownMemberType]
             self.rule_engine.evaluate(fire, context)  # pyright: ignore[reportArgumentType]
 
             mission = self.missions.get_for_fire(p.fire_id)
             if mission:
-                self.missions.transition(
-                    mission.mission_id, COMPLETED, reason="fire_suppressed"
-                )
+                self.missions.transition(mission.mission_id, COMPLETED, reason="fire_suppressed")
+
     # endregion
     # region  TELEMETRY LOOP HANDLERS
 
-    def _build_context(self, trigger: EvalTrigger, election_meta: dict[str, Any] | None = None,
-                    telemetry_rules: list[str] | None = None) -> RuleContext:
+    def _build_context(
+        self,
+        trigger: EvalTrigger,
+        election_meta: dict[str, Any] | None = None,
+        telemetry_rules: list[str] | None = None,
+    ) -> RuleContext:
         return RuleContext(
             trigger=trigger,
             event_log=self.event_log,
@@ -727,7 +752,7 @@ class CommanderCore:
                 "resource_exhaustion",
                 "fire_expansion",
                 "containment_failure",
-            ]
+            ],
         )
         self.rule_engine.evaluate(fire, context)
 
@@ -765,7 +790,7 @@ class CommanderCore:
         if fire:
             context = self._build_context(  # pyright: ignore[reportUnknownMemberType]
                 trigger=EvalTrigger.INTENSITY_UPDATE,
-                telemetry_rules=["severity_increase", "high_severity", "fire_expansion"]
+                telemetry_rules=["severity_increase", "high_severity", "fire_expansion"],
             )
             # Attach intensity payload to context (the rule reads it)
             context._intensity_payload = update.model_dump()  # pyright: ignore[reportAttributeAccessIssue]
@@ -787,19 +812,20 @@ class CommanderCore:
 
         # Transition back to ACTIVE
         self.fires.transition(fire_id, "ACTIVE", reason="rekindled_detected")
-        self.event_log.append(DomainEvent(
-            event_type="FIRE_REKINDLED",  # pyright: ignore[reportArgumentType]
-            fire_id=fire_id,
-            reason="scout_detected_hotspot",
-            payload=payload,
-        ))
+        self.event_log.append(
+            DomainEvent(
+                event_type="FIRE_REKINDLED",  # pyright: ignore[reportArgumentType]
+                fire_id=fire_id,
+                reason="scout_detected_hotspot",
+                payload=payload,
+            )
+        )
 
         # Re-evaluate to trigger dispatch
         fire = self.fires.get(fire_id)
         if fire:
             context = self._build_context(  # pyright: ignore[reportUnknownMemberType]
-                trigger=EvalTrigger.REKINDLED,
-                telemetry_rules=["fire_dispatch"]
+                trigger=EvalTrigger.REKINDLED, telemetry_rules=["fire_dispatch"]
             )
             context._rekindled_payload = payload  # pyright: ignore[reportAttributeAccessIssue]
             self.rule_engine.evaluate(fire, context)
@@ -823,9 +849,11 @@ class CommanderCore:
 
         # Term guard: reject stale elections
         if term <= fire.leader_term:
-            log("CommanderCore",
+            log(
+                "CommanderCore",
                 f"election term {term} <= current {fire.leader_term} - rejecting stale",
-                channel="SYSTEM")
+                channel="SYSTEM",
+            )
             return
 
         # Verify the new leader is actually capable
@@ -836,7 +864,7 @@ class CommanderCore:
 
         # Accept the election - update assigned nodes now, but defer leader_term update
         # until AFTER ElectedLeaderRule fires. ElectedLeaderRule checks:
-# meta["term"] <= fire.leader_term stale
+        # meta["term"] <= fire.leader_term stale
         # If we set leader_term = term here first, the rule rejects its own election.
         self.fires.add_assigned_node(fire_id, new_leader, reason=f"bully_election_term_{term}")
         # Persist
@@ -844,13 +872,15 @@ class CommanderCore:
             self.fires._repo.upsert(self.fires.get(fire_id))  # pyright: ignore[reportArgumentType, reportPrivateUsage]
 
         # Write LEADER_REPLACED domain event
-        self.event_log.append(DomainEvent(
-            event_type=LEADER_REPLACED,  # pyright: ignore[reportArgumentType]
-            fire_id=fire_id,
-            node_id=new_leader,
-            reason=f"bully_election_term_{term}",
-            payload={"old_leader": old_leader, "term": term, "election_type": election_type},
-        ))
+        self.event_log.append(
+            DomainEvent(
+                event_type=LEADER_REPLACED,  # pyright: ignore[reportArgumentType]
+                fire_id=fire_id,
+                node_id=new_leader,
+                reason=f"bully_election_term_{term}",
+                payload={"old_leader": old_leader, "term": term, "election_type": election_type},
+            )
+        )
 
         # Re-evaluate the fire to send CONFIRM_LEADERSHIP via ElectedLeaderRule
         # NOTE: leader_term is still the OLD value here - ElectedLeaderRule's guard
@@ -865,7 +895,7 @@ class CommanderCore:
                     "old_leader_id": old_leader,
                     "term": term,
                 },
-                telemetry_rules=["elected_leader"]
+                telemetry_rules=["elected_leader"],
             )
             self.rule_engine.evaluate(fire, context)
 
@@ -874,9 +904,12 @@ class CommanderCore:
         if current is not None:
             self.fires.update_leader_term(fire_id, term, "election_accepted")
 
-        log("CommanderCore",
+        log(
+            "CommanderCore",
             f"election accepted: fire {fire_id[:8]} now led by {new_leader} term={term}",
-            channel="SYSTEM")
+            channel="SYSTEM",
+        )
+
     # endregion
 
     # region  ACK HANDLER
@@ -893,20 +926,21 @@ class CommanderCore:
         transition, etc.) short-circuits before any of that runs.
         """
         trace_id = payload.get("trace_id")
-        status   = payload.get("status")
-        node_id  = payload.get("node_id")
+        status = payload.get("status")
+        node_id = payload.get("node_id")
 
         if not (trace_id and status):
             return
 
         event_type = payload.get("event_type") or STATUS_TO_EVENT_TYPE.get(status, status)
-        event_id   = payload.get("event_id") or f"{trace_id}:{status}"
+        event_id = payload.get("event_id") or f"{trace_id}:{status}"
 
         accepted = self.tracker.update(trace_id, event_type, {**payload, "event_id": event_id})  # pyright: ignore[reportArgumentType, reportUnknownMemberType]
-        log("CommanderCore",
-            f"ACK trace={trace_id[:8]} status={status} from={node_id} "
-            f"accepted={accepted}",
-            channel="TRACKER")
+        log(
+            "CommanderCore",
+            f"ACK trace={trace_id[:8]} status={status} from={node_id} accepted={accepted}",
+            channel="TRACKER",
+        )
 
         if not accepted:
             # Tracker rejected this event (unknown trace, dup, bad
@@ -919,23 +953,24 @@ class CommanderCore:
         # and future Step 5 sync. fire_id recovered from tracker record if
         # not in the ACK payload directly.
         _tracker_rec = self.tracker.get_all().get(trace_id, {})
-        _fire_id     = (payload.get("fire_id")
-                        or _tracker_rec.get("command", {}).get("payload", {}).get("fire_id"))
+        _fire_id = payload.get("fire_id") or _tracker_rec.get("command", {}).get("payload", {}).get("fire_id")
         _de_type_map = {
-            "RECEIVED":       COMMAND_ACK_RECEIVED,
-            "EXECUTED":       COMMAND_ACK_EXECUTED,
-            "FAILED":         COMMAND_ACK_FAILED,
+            "RECEIVED": COMMAND_ACK_RECEIVED,
+            "EXECUTED": COMMAND_ACK_EXECUTED,
+            "FAILED": COMMAND_ACK_FAILED,
             "COMMAND_FAILED": COMMAND_ACK_FAILED,
         }
         _de_type = _de_type_map.get(status)
         if _de_type:
-            self.event_log.append(DomainEvent(
-                event_type=_de_type,  # pyright: ignore[reportArgumentType]
-                fire_id=_fire_id,
-                node_id=node_id,
-                reason=f"ack_{status.lower()}_trace_{trace_id[:8]}",
-                payload={"trace_id": trace_id, "status": status},
-            ))
+            self.event_log.append(
+                DomainEvent(
+                    event_type=_de_type,  # pyright: ignore[reportArgumentType]
+                    fire_id=_fire_id,
+                    node_id=node_id,
+                    reason=f"ack_{status.lower()}_trace_{trace_id[:8]}",
+                    payload={"trace_id": trace_id, "status": status},
+                )
+            )
 
         # Only release job on command failure or explicit node offline.
         # EXECUTED does NOT free the node - it remains assigned to the fire
@@ -949,7 +984,8 @@ class CommanderCore:
                 mission = self.missions.get_for_fire(rec.current_job)
                 if mission:
                     self.missions.transition(
-                        mission.mission_id, RUNNING,
+                        mission.mission_id,
+                        RUNNING,
                         reason=f"ack_received_from_{node_id}",
                         assigned_node=node_id,
                     )
@@ -985,27 +1021,29 @@ class CommanderCore:
             return
             # Terminal fires should never be redispatched
         if fire.state in ("COMPLETED", "SUPPRESSED"):
-            log("CommanderCore",
-                f"fire {fire_id[:8]} is {fire.state} - skipping redispatch",
-                channel="SYSTEM")
+            log("CommanderCore", f"fire {fire_id[:8]} is {fire.state} - skipping redispatch", channel="SYSTEM")
             return
         try:
             # Step 1: write LEADER_DIED event (audit trail)
-            self.event_log.append(DomainEvent(
-                event_type=LEADER_DIED,  # pyright: ignore[reportArgumentType]
-                fire_id=fire_id,
-                node_id=dead_leader,
-                reason="heartbeat_timeout",
-            ))
+            self.event_log.append(
+                DomainEvent(
+                    event_type=LEADER_DIED,  # pyright: ignore[reportArgumentType]
+                    fire_id=fire_id,
+                    node_id=dead_leader,
+                    reason="heartbeat_timeout",
+                )
+            )
 
             # Step 2: write FIRE_REDISPATCHED event BEFORE evaluate() so
             # we can read it back as context after evaluate() returns.
-            self.event_log.append(DomainEvent(
-                event_type=FIRE_REDISPATCHED,  # pyright: ignore[reportArgumentType]
-                fire_id=fire_id,
-                node_id=dead_leader,
-                reason=f"leader_{dead_leader}_offline",
-            ))
+            self.event_log.append(
+                DomainEvent(
+                    event_type=FIRE_REDISPATCHED,  # pyright: ignore[reportArgumentType]
+                    fire_id=fire_id,
+                    node_id=dead_leader,
+                    reason=f"leader_{dead_leader}_offline",
+                )
+            )
 
             # Step 3: clear assignment through FireStateStore - bumps
             # updated_at so the backup's LWW merge accepts the change.
@@ -1015,15 +1053,16 @@ class CommanderCore:
             self.rule_engine.evaluate(self.fires.get(fire_id))  # pyright: ignore[reportArgumentType]
 
             # Step 4b: ContainmentFailureRule may have just re-activated the fire
-# (CONTAINED ACTIVE, assigned_nodes cleared). FireDispatchRule ran
+            # (CONTAINED ACTIVE, assigned_nodes cleared). FireDispatchRule ran
             # BEFORE ContainmentFailureRule in the same pass and saw CONTAINED state,
             # so it skipped dispatch. Re-evaluate now that the fire is ACTIVE.
             fire_mid = self.fires.get(fire_id)
             if fire_mid and fire_mid.state == ACTIVE and not fire_mid.assigned_nodes:
-                log("CommanderCore",
-                    f"fire {fire_id[:8]} re-activated by ContainmentFailureRule - "
-                    f"running second dispatch pass",
-                    channel="SYSTEM")
+                log(
+                    "CommanderCore",
+                    f"fire {fire_id[:8]} re-activated by ContainmentFailureRule - running second dispatch pass",
+                    channel="SYSTEM",
+                )
                 context = self._build_context(trigger=EvalTrigger.REDISPATCH)  # pyright: ignore[reportUnknownMemberType]
                 self.rule_engine.evaluate(fire_mid, context)
 
@@ -1037,29 +1076,29 @@ class CommanderCore:
                 mission = self.missions.get_for_fire(fire_id)
                 if mission:
                     self.missions.transition(
-                        mission.mission_id, ASSIGNED,
+                        mission.mission_id,
+                        ASSIGNED,
                         reason=f"redispatched_to_{fire_after.assigned_node}",
                         assigned_node=fire_after.assigned_node,
                     )
-                    log("CommanderCore",
-                        f"mission {mission.mission_id[:8]} → ASSIGNED "
-                        f"after redispatch to {fire_after.assigned_node}",
-                        channel="SYSTEM")
+                    log(
+                        "CommanderCore",
+                        f"mission {mission.mission_id[:8]} → ASSIGNED after redispatch to {fire_after.assigned_node}",
+                        channel="SYSTEM",
+                    )
 
-            log("CommanderCore",
+            log(
+                "CommanderCore",
                 f"re-dispatched fire={fire_id[:8]} after leader {dead_leader} offline",
-                channel="SYSTEM")
+                channel="SYSTEM",
+            )
         except Exception as exc:
-            log("CommanderCore",
-                f"re-dispatch failed for fire={fire_id[:8]}: {exc}",
-                channel="SYSTEM")
-
-
+            log("CommanderCore", f"re-dispatch failed for fire={fire_id[:8]}: {exc}", channel="SYSTEM")
 
     # endregion
 
     # region  STATE SYNC (Immediately publish)
-    
+
     def _publish_snapshot_now(self) -> None:
         """Immediately publish a full snapshot, regardless of _active flag.
 
@@ -1068,30 +1107,32 @@ class CommanderCore:
         these in _apply_snapshot() to stay in sync even if a fire
         decision happened between two snapshot intervals.
         """
-        fires_payload    = self.fires.snapshot_all()
+        fires_payload = self.fires.snapshot_all()
         missions_payload = self.missions.snapshot_all()
-        events_delta     = [
-            e.model_dump()
-            for e in self.event_log.get_since(self._last_snapshot_at)
-        ]
+        events_delta = [e.model_dump() for e in self.event_log.get_since(self._last_snapshot_at)]
         now = time.time()
-        self._mqtt.publish(STATE_SNAPSHOT_TOPIC, {
-            "timestamp":    now,
-            "fires":        fires_payload,
-            "missions":     missions_payload,
-            "nodes": {
-                nid: {"status": rec.status, "current_job": rec.current_job}
-                for nid, rec in self._registry.get_all().items()
+        self._mqtt.publish(
+            STATE_SNAPSHOT_TOPIC,
+            {
+                "timestamp": now,
+                "fires": fires_payload,
+                "missions": missions_payload,
+                "nodes": {
+                    nid: {"status": rec.status, "current_job": rec.current_job}
+                    for nid, rec in self._registry.get_all().items()
+                },
+                "events_delta": events_delta,
             },
-            "events_delta": events_delta,
-        })
+        )
         self._last_snapshot_at = now
-        log("CommanderCore",
+        log(
+            "CommanderCore",
             f"final snapshot published: {len(fires_payload)} fire(s), "
             f"{len(missions_payload)} mission(s), "
             f"{len(events_delta)} event(s) ({self._node_id})",
-            channel="STATE")
-        
+            channel="STATE",
+        )
+
     # endregion
 
     # region  STATE SYNC (standby mirror)
@@ -1119,9 +1160,9 @@ class CommanderCore:
         FireProjector to fill any state gaps the LWW merge missed.
         """
         try:
-            fires_snap    = payload.get("fires", [])
+            fires_snap = payload.get("fires", [])
             missions_snap = payload.get("missions", [])
-            events_delta  = payload.get("events_delta", [])
+            events_delta = payload.get("events_delta", [])
 
             fires_applied = 0
             for fire_data in fires_snap:
@@ -1139,6 +1180,7 @@ class CommanderCore:
             events_applied = 0
             if events_delta:
                 from core.state.projector import FireProjector
+
                 projector = FireProjector(self.fires, self.missions)
                 for raw in events_delta:
                     try:
@@ -1151,21 +1193,23 @@ class CommanderCore:
                             projector.apply(event)
                             events_applied += 1
                     except Exception as e_exc:
-                        log("CommanderCore",
-                            f"events_delta replay error for event "
-                            f"{raw.get('event_id', '?')[:8]}: {e_exc}",
-                            channel="STATE")
+                        log(
+                            "CommanderCore",
+                            f"events_delta replay error for event {raw.get('event_id', '?')[:8]}: {e_exc}",
+                            channel="STATE",
+                        )
 
-            log("CommanderCore",
+            log(
+                "CommanderCore",
                 f"snapshot merged: {fires_applied}/{len(fires_snap)} fire(s), "
                 f"{missions_applied}/{len(missions_snap)} mission(s), "
                 f"{events_applied}/{len(events_delta)} event(s) applied "
                 f"({self._node_id})",
-                channel="STATE")
+                channel="STATE",
+            )
 
         except Exception as exc:
-            log("CommanderCore", f"snapshot apply error: {exc} "
-                f"({self._node_id})", channel="STATE")
+            log("CommanderCore", f"snapshot apply error: {exc} ({self._node_id})", channel="STATE")
 
     # endregion
 
@@ -1176,25 +1220,19 @@ class CommanderCore:
             time.sleep(EXPIRE_TICK_SECONDS)
             if not self._active:
                 continue
-            try:
+            with contextlib.suppress(Exception):
                 self._store.expire_stale()
-            except Exception:
-                pass
             # evict old terminal missions so _missions
             # dict doesn't grow unboundedly over long runs.
             try:
                 evicted = self.missions.evict_terminal(max_age_seconds=3600.0)
                 if evicted:
-                    log("CommanderCore",
-                        f"evicted {evicted} terminal mission(s) from memory",
-                        channel="STATE")
+                    log("CommanderCore", f"evicted {evicted} terminal mission(s) from memory", channel="STATE")
             except Exception:
                 pass
             # check for commands that never received an ACK.
-            try:
+            with contextlib.suppress(Exception):
                 self._check_command_timeouts()
-            except Exception:
-                pass
 
     def _check_command_timeouts(self) -> None:
         """Detect commands stuck in ISSUED with no ACK.
@@ -1210,10 +1248,10 @@ class CommanderCore:
         """
         now = time.time()
         for trace_id, record in self.tracker.get_issued():
-            cmd         = record.get("command", {})
+            cmd = record.get("command", {})
             issued_hist = record.get("history", [])
             # issued timestamp is on the first history entry
-            issued_at   = issued_hist[0].get("timestamp", now) if issued_hist else now
+            issued_at = issued_hist[0].get("timestamp", now) if issued_hist else now
             if now - issued_at < COMMAND_ACK_TIMEOUT_SECONDS:
                 continue
 
@@ -1227,14 +1265,19 @@ class CommanderCore:
                     if node_id:
                         self._registry.release_job(node_id)
                     continue
-            log("CommanderCore",
+            log(
+                "CommanderCore",
                 f"ACK timeout trace={trace_id[:8]} node={node_id} fire={str(fire_id)[:8] if fire_id else 'none'}"
                 f" - treating as failed, releasing node",
-                channel="TRACKER")
+                channel="TRACKER",
+            )
 
             # Mark the command failed in the tracker so it stops appearing
-            self.tracker.update(trace_id, "COMMAND_ACK_FAILED",  # pyright: ignore[reportUnknownMemberType]
-                                 {"reason": "ack_timeout"})
+            self.tracker.update(
+                trace_id,
+                "COMMAND_ACK_FAILED",  # pyright: ignore[reportUnknownMemberType]
+                {"reason": "ack_timeout"},
+            )
 
             if node_id:
                 self._registry.release_job(node_id)
@@ -1253,44 +1296,48 @@ class CommanderCore:
         receipt via _apply_snapshot().
         """
         while self._loops_running:
-            in_grace = (self._deactivation_grace_start is not None
-                        and time.time() - self._deactivation_grace_start < GRACE_PERIOD_SECONDS)
+            in_grace = (
+                self._deactivation_grace_start is not None
+                and time.time() - self._deactivation_grace_start < GRACE_PERIOD_SECONDS
+            )
 
             if not self._active and not in_grace:
                 break
-            
 
             time.sleep(STATE_SNAPSHOT_SECONDS)
 
             if not self._active and not in_grace:
                 break
             try:
-                fires_payload    = self.fires.snapshot_all()
+                fires_payload = self.fires.snapshot_all()
                 missions_payload = self.missions.snapshot_all()
-                events_delta     = [
-                    e.model_dump()
-                    for e in self.event_log.get_since(self._last_snapshot_at)
-                ]
+                events_delta = [e.model_dump() for e in self.event_log.get_since(self._last_snapshot_at)]
                 now = time.time()
-                self._mqtt.publish(STATE_SNAPSHOT_TOPIC, {
-                    "timestamp":    now,
-                    "fires":        fires_payload,
-                    "missions":     missions_payload,
-                    "nodes": {
-                        nid: {"status": rec.status, "current_job": rec.current_job}
-                        for nid, rec in self._registry.get_all().items()
+                self._mqtt.publish(
+                    STATE_SNAPSHOT_TOPIC,
+                    {
+                        "timestamp": now,
+                        "fires": fires_payload,
+                        "missions": missions_payload,
+                        "nodes": {
+                            nid: {"status": rec.status, "current_job": rec.current_job}
+                            for nid, rec in self._registry.get_all().items()
+                        },
+                        "events_delta": events_delta,
                     },
-                    "events_delta": events_delta,
-                })
+                )
                 self._last_snapshot_at = now
-                log("CommanderCore",
+                log(
+                    "CommanderCore",
                     f"snapshot published: {len(fires_payload)} fire(s), "
                     f"{len(missions_payload)} mission(s), "
                     f"{len(events_delta)} event(s) ({self._node_id})",
-                    channel="STATE")
+                    channel="STATE",
+                )
             except Exception as exc:
                 log("CommanderCore", f"snapshot loop error: {exc}", channel="STATE")
 
     # endregion
+
 
 # endregion (end of class CommanderCore)

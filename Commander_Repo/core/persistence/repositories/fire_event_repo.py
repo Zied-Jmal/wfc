@@ -6,15 +6,15 @@ FireEventRepository - append-only fire event log
 """
 
 from __future__ import annotations
-from typing import Any
 
 import json
+from typing import Any
 
 from core.persistence.database import Database
 from wfc_shared.schemas.events import FireEvent
 
-class FireEventRepository:
 
+class FireEventRepository:
     """Append-only log of every fire event (DETECTED/CONTAINED/SUPPRESSED).
 
     Different from FireStateRepository - this is the immutable historical
@@ -79,17 +79,14 @@ class FireEventRepository:
     def _row_to_dict(row: Any) -> dict[str, Any]:
         """Convert a SQLite row to the canonical fire-event dict shape."""
         return {
-            "id":          row["id"],
-            "fire_id":     row["fire_id"],
-            "event_type":  row["event_type"],
-            "source":      row["source"],
-            "severity":    row["severity"],
-            "location":    row["location"],
-            "location_coords": (
-                (row["location_x"], row["location_y"])
-                if row["location_x"] is not None else None
-            ),
-            "sensor_id":   row["sensor_id"],
-            "timestamp":   row["timestamp"],
-            "payload":     json.loads(row["payload_json"]),
+            "id": row["id"],
+            "fire_id": row["fire_id"],
+            "event_type": row["event_type"],
+            "source": row["source"],
+            "severity": row["severity"],
+            "location": row["location"],
+            "location_coords": ((row["location_x"], row["location_y"]) if row["location_x"] is not None else None),
+            "sensor_id": row["sensor_id"],
+            "timestamp": row["timestamp"],
+            "payload": json.loads(row["payload_json"]),
         }

@@ -14,28 +14,29 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
-from wfc_shared.schemas.commands import Command
-from core.state.fire_state_store import FireRecord
 from core.node_registry.registry import NodeRegistry
 from core.rule_engine.context import RuleContext
-
+from core.state.fire_state_store import FireRecord
+from wfc_shared.schemas.commands import Command
 
 # region  DATACLASS - RuleResult
+
 
 @dataclass
 class RuleResult:
     triggered: bool
-    commands:  list[Command] = field(default_factory=list)  # pyright: ignore[reportUnknownVariableType]
-    reason:    str           = ""   # always set - logged regardless of triggered state
-    state_updates: dict[str, Any]|None = None
+    commands: list[Command] = field(default_factory=list)  # pyright: ignore[reportUnknownVariableType]
+    reason: str = ""  # always set - logged regardless of triggered state
+    state_updates: dict[str, Any] | None = None
+
 
 # endregion
 
 
 # region  CLASS - Rule (ABC)
 
-class Rule(ABC):
 
+class Rule(ABC):
     """
     Abstract base for all rule engine rules.
 
@@ -84,5 +85,6 @@ class Rule(ABC):
         return False
 
     # endregion
+
 
 # endregion (end of class Rule)

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from core.rule_engine.rule import Rule, RuleResult
-from core.rule_engine.context import RuleContext
 from core.node_registry.registry import NodeRegistry
-from core.state.fire_state_store import FireRecord
-from wfc_shared.schemas.commands import Command
-from wfc_shared.enums.command_types import REINFORCE_FIRE, ESCALATE_FIRE
+from core.rule_engine.context import RuleContext
+from core.rule_engine.rule import Rule, RuleResult
 from core.rule_engine.trigger import EvalTrigger
+from core.state.fire_state_store import FireRecord
+from wfc_shared.enums.command_types import ESCALATE_FIRE, REINFORCE_FIRE
+from wfc_shared.schemas.commands import Command
+
 
 class SwarmAttritionRule(Rule):
     """Reinforces if drones lost or battery critically low."""
@@ -25,9 +26,11 @@ class SwarmAttritionRule(Rule):
 
             if snap.lost_drones > 3 or snap.avg_battery_pct < 0.2:
                 # Try to reinforce first
-                available = [n for n in registry.get_all().values() 
-                             if "SWARM_LEAD" in n.capabilities and n.status == "ACTIVE"
-                             and n.node_id not in fire.assigned_nodes]
+                available = [
+                    n
+                    for n in registry.get_all().values()
+                    if "SWARM_LEAD" in n.capabilities and n.status == "ACTIVE" and n.node_id not in fire.assigned_nodes
+                ]
                 if available:
                     return RuleResult(
                         triggered=True,
@@ -36,9 +39,9 @@ class SwarmAttritionRule(Rule):
                             Command(
                                 target_node=available[0].node_id,  # pyright: ignore[reportAttributeAccessIssue, reportUnknownArgumentType, reportUnknownMemberType]
                                 command_type=REINFORCE_FIRE,  # pyright: ignore[reportArgumentType]
-                                payload={"fire_id": fire.fire_id}
+                                payload={"fire_id": fire.fire_id},
                             )
-                        ]
+                        ],
                     )
                 else:
                     # No available leader -> escalate
@@ -49,8 +52,8 @@ class SwarmAttritionRule(Rule):
                             Command(
                                 target_node="SYSTEM",
                                 command_type=ESCALATE_FIRE,  # pyright: ignore[reportArgumentType]
-                                payload={"fire_id": fire.fire_id}
+                                payload={"fire_id": fire.fire_id},
                             )
-                        ]
+                        ],
                     )
         return RuleResult(triggered=False, reason="swarm_healthy")

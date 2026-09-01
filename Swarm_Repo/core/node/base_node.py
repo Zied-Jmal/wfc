@@ -15,13 +15,13 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from core.messaging.mqtt_client import MQTTClient
 from core.heartbeat.heartbeat import Heartbeat
+from core.messaging.mqtt_client import MQTTClient
 from core.utils.logger import log
 from wfc_shared.enums.topics import (
-    registry_announce_topic,
-    heartbeat_topic,            # was manually formatting the topic string
     REGISTRY_ANNOUNCE_WILDCARD,
+    heartbeat_topic,  # was manually formatting the topic string
+    registry_announce_topic,
 )
 from wfc_shared.schemas.announcements import NodeAnnouncement
 
@@ -34,19 +34,19 @@ class BaseNode:
 
     def __init__(
         self,
-        node_id:      str,
-        node_type:    str,
-        capabilities: list[str]             | None = None,
-        zone:         str                   | None = None,
-        location:     tuple[float, float]   | None = None,
+        node_id: str,
+        node_type: str,
+        capabilities: list[str] | None = None,
+        zone: str | None = None,
+        location: tuple[float, float] | None = None,
     ) -> None:
-        self.node_id      = node_id
-        self.node_type    = node_type
+        self.node_id = node_id
+        self.node_type = node_type
         self.capabilities = capabilities or []
-        self.zone         = zone
-        self.location     = location
+        self.zone = zone
+        self.location = location
 
-        self.mqtt      = MQTTClient(client_id=node_id)
+        self.mqtt = MQTTClient(client_id=node_id)
         self.heartbeat = Heartbeat(interval=5)
 
     def start(self) -> None:
@@ -130,12 +130,15 @@ class BaseNode:
 
     def _send_heartbeat(self) -> None:
         """Publish a heartbeat message on the heartbeat topic."""
-        self.mqtt.publish(heartbeat_topic(self.node_id), {
-            "node_id":   self.node_id,
-            "type":      self.node_type,
-            "timestamp": time.time(),
-            "status":    "alive",
-        })
+        self.mqtt.publish(
+            heartbeat_topic(self.node_id),
+            {
+                "node_id": self.node_id,
+                "type": self.node_type,
+                "timestamp": time.time(),
+                "status": "alive",
+            },
+        )
 
     def _on_message(self, topic: str, payload: dict[str, Any] | str) -> None:
         """Dispatch incoming MQTT message to handle_message."""

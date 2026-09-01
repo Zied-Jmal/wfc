@@ -8,16 +8,19 @@ NodeRegistry - global node state store
 
 from __future__ import annotations
 
+import contextlib
 import math
 import time
 from collections.abc import Callable
+from typing import Any
 
-from wfc_shared.schemas.nodes import NodeRecord
-from wfc_shared.enums.node_status import REGISTERED, ACTIVE, OFFLINE
 from core.persistence.database import Database
 from core.utils.logger import log
+from wfc_shared.enums.node_status import ACTIVE, OFFLINE, REGISTERED
+from wfc_shared.schemas.nodes import NodeRecord
 
 # region  HELPERS
+
 
 def _distance(a: tuple[float, float], b: tuple[float, float]) -> float:
     """Euclidean distance between two (x, y) or (lat, lon) points.
@@ -25,19 +28,22 @@ def _distance(a: tuple[float, float], b: tuple[float, float]) -> float:
     """
     return math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
 
+
 # endregion
 
 # region  CLASS - NodeRegistry
 
-class NodeRegistry:
 
+class NodeRegistry:
     """Central in-memory registry of all nodes in the system.
     Pure data store - no side effects, no event emission.
     """
 
     # region  INITIALISATION
 
-    def __init__(self, db: Database | None = None, on_node_available: Callable[[str, list[str]], None] | None = None) -> None:
+    def __init__(
+        self, db: Database | None = None, on_node_available: Callable[[str, list[str]], None] | None = None
+    ) -> None:
         """Args:
         db: optional Database instance for persistence.
         on_node_available: optional callable(node_id, capabilities)
@@ -50,11 +56,13 @@ class NodeRegistry:
         self._on_node_available = on_node_available
         if db is not None:
             from core.persistence.repositories.node_repo import NodeRepository
+
             self._repo = NodeRepository(db)
             for record in self._repo.get_all():
                 self._nodes[record.node_id] = record
             if self._nodes:
-                log("NodeRegistry",
+                log(
+                    "NodeRegistry",
                     f"hydrated {len(self._nodes)} node(s) from database",
                     channel="REGISTRY",
                 )
@@ -65,11 +73,11 @@ class NodeRegistry:
 
     def register(
         self,
-        node_id:      str,
-        node_type:    str                          = "UNKNOWN",
-        capabilities: list[str]        | None      = None,
-        zone:         str              | None      = None,
-        location:     tuple[float, float] | None   = None,
+        node_id: str,
+        node_type: str = "UNKNOWN",
+        capabilities: list[str] | None = None,
+        zone: str | None = None,
+        location: tuple[float, float] | None = None,
     ) -> None:
         """Register a node. Sets status to REGISTERED (not ACTIVE).
         ACTIVE is granted separately by grant_active() after first heartbeat.
@@ -81,7 +89,7 @@ class NodeRegistry:
         """
         if node_id in self._nodes:
             existing = self._nodes[node_id]
-            was_offline = (existing.status == OFFLINE)
+            was_offline = existing.status == OFFLINE
 
             updates: dict[str, Any] = {}
             if capabilities is not None and capabilities != existing.capabilities:
@@ -92,10 +100,11 @@ class NodeRegistry:
                 updates["location"] = location
             if was_offline and existing.current_job is not None:
                 updates["current_job"] = None
-                log("NodeRegistry",
-                    f"{node_id} re-registered after OFFLINE - clearing stale "
-                    f"current_job={existing.current_job}",
-                    channel="REGISTRY")
+                log(
+                    "NodeRegistry",
+                    f"{node_id} re-registered after OFFLINE - clearing stale current_job={existing.current_job}",
+                    channel="REGISTRY",
+                )
             if updates:
                 self._nodes[node_id] = existing.model_copy(update=updates)
                 if self._repo is not None:
@@ -106,17 +115,18 @@ class NodeRegistry:
             node_id=node_id,
             node_type=node_type,
             capabilities=capabilities or [],
-            status=REGISTERED,              # R2: REGISTERED, not ACTIVE
+            status=REGISTERED,  # R2: REGISTERED, not ACTIVE
             zone=zone,
             location=location,
         )
         self._nodes[node_id] = record
         if self._repo is not None:
             self._repo.upsert(record)
-        log("NodeRegistry",
-            f"REGISTERED {node_id} ({node_type}) "
-            f"caps={record.capabilities} zone={zone} location={location}",
-            channel="REGISTRY")
+        log(
+            "NodeRegistry",
+            f"REGISTERED {node_id} ({node_type}) caps={record.capabilities} zone={zone} location={location}",
+            channel="REGISTRY",
+        )
 
     def grant_active(self, node_id: str) -> None:
         """System grants ACTIVE status after first valid heartbeat.
@@ -124,18 +134,14 @@ class NodeRegistry:
         Called by heartbeat() on first heartbeat from a REGISTERED node.
         """
         if node_id not in self._nodes:
-            return   # R1: unknown node - ignored
+            return  # R1: unknown node - ignored
         rec = self._nodes[node_id]
         if rec.status == REGISTERED:
             self._nodes[node_id] = rec.model_copy(update={"status": ACTIVE})
-            log("NodeRegistry",
-                f"ACTIVE granted: {node_id} (first heartbeat validated)",
-                channel="REGISTRY")
+            log("NodeRegistry", f"ACTIVE granted: {node_id} (first heartbeat validated)", channel="REGISTRY")
             if self._on_node_available is not None:  # pyright: ignore[reportUnknownMemberType]
-                try:
+                with contextlib.suppress(Exception):
                     self._on_node_available(node_id, rec.capabilities)  # pyright: ignore[reportUnknownMemberType]
-                except Exception:
-                    pass
 
     # endregion
 
@@ -153,37 +159,31 @@ class NodeRegistry:
         log("REGISTRY", f"heartbeat received from {node_id}", channel="DEBUG")
 
         if node_id not in self._nodes:
-            return   # R1: heartbeat from unregistered node - silently ignored
+            return  # R1: heartbeat from unregistered node - silently ignored
 
-        rec      = self._nodes[node_id]
-        now      = time.time()
+        rec = self._nodes[node_id]
+        now = time.time()
         updates: dict[str, Any] = {"last_seen": now}
 
         became_active = False
         if rec.status == REGISTERED:
             updates["status"] = ACTIVE
             became_active = True
-            log("NodeRegistry",
-                f"ACTIVE granted: {node_id} (first heartbeat validated)",
-                channel="REGISTRY")
+            log("NodeRegistry", f"ACTIVE granted: {node_id} (first heartbeat validated)", channel="REGISTRY")
         elif rec.status == OFFLINE:
             updates["status"] = ACTIVE
             became_active = True
-            log("NodeRegistry",
-                f"ACTIVE recovered: {node_id} (came back from OFFLINE)",
-                channel="REGISTRY")
+            log("NodeRegistry", f"ACTIVE recovered: {node_id} (came back from OFFLINE)", channel="REGISTRY")
 
         self._nodes[node_id] = rec.model_copy(update=updates)
 
         if self._repo is not None:
             self._repo.upsert(self._nodes[node_id])
-#----------
+        # ----------
 
         if became_active and self._on_node_available is not None:  # pyright: ignore[reportUnknownMemberType]
-            try:
+            with contextlib.suppress(Exception):
                 self._on_node_available(node_id, rec.capabilities)  # pyright: ignore[reportUnknownMemberType]
-            except Exception:
-                pass
 
     def mark_offline(self, node_id: str) -> None:
         """OFFLINE is ONLY set by the system (this method).
@@ -209,20 +209,15 @@ class NodeRegistry:
     def assign_job(self, node_id: str, fire_id: str) -> None:
         """Mark node as busy with fire_id. Persisted to SQLite."""
         if node_id in self._nodes:
-            self._nodes[node_id] = self._nodes[node_id].model_copy(
-                update={"current_job": fire_id}
-            )
+            self._nodes[node_id] = self._nodes[node_id].model_copy(update={"current_job": fire_id})
             if self._repo is not None:
                 self._repo.upsert(self._nodes[node_id])
-            log("NodeRegistry",
-                f"job assigned: fire={fire_id[:8]} → {node_id}", channel="REGISTRY")
+            log("NodeRegistry", f"job assigned: fire={fire_id[:8]} → {node_id}", channel="REGISTRY")
 
     def release_job(self, node_id: str) -> None:
         """Clear node's current_job, making it available for the next dispatch."""
         if node_id in self._nodes:
-            self._nodes[node_id] = self._nodes[node_id].model_copy(
-                update={"current_job": None}
-            )
+            self._nodes[node_id] = self._nodes[node_id].model_copy(update={"current_job": None})
             if self._repo is not None:
                 self._repo.upsert(self._nodes[node_id])
             log("NodeRegistry", f"job released: {node_id}", channel="REGISTRY")
@@ -281,10 +276,7 @@ class NodeRegistry:
         Returns:
             List of matching node_id strings.
         """
-        return [
-            nid for nid, rec in self._nodes.items()
-            if rec.node_type == node_type and rec.status == ACTIVE
-        ]
+        return [nid for nid, rec in self._nodes.items() if rec.node_type == node_type and rec.status == ACTIVE]
 
     def get_by_capability(self, capability: str) -> list[str]:
         """Return node IDs of all ACTIVE nodes that have the given capability.
@@ -295,10 +287,7 @@ class NodeRegistry:
         Returns:
             List of matching node_id strings.
         """
-        return [
-            nid for nid, rec in self._nodes.items()
-            if capability in rec.capabilities and rec.status == ACTIVE
-        ]
+        return [nid for nid, rec in self._nodes.items() if capability in rec.capabilities and rec.status == ACTIVE]
 
     def get_available(self, capability: str) -> list[str]:
         """Return ACTIVE nodes with the given capability that have no active job.
@@ -317,9 +306,14 @@ class NodeRegistry:
             if capability in rec.capabilities and rec.status == ACTIVE and rec.current_job is None:
                 available.append(nid)  # pyright: ignore[reportUnknownMemberType]
             else:
-                log("REGISTRY", f"get_available: {nid} caps={rec.capabilities} status={rec.status} job={rec.current_job}", channel="DEBUG")
+                log(
+                    "REGISTRY",
+                    f"get_available: {nid} caps={rec.capabilities} status={rec.status} job={rec.current_job}",
+                    channel="DEBUG",
+                )
         log("REGISTRY", f"get_available({capability}) -> {available}", channel="DEBUG")
         return available  # pyright: ignore[reportUnknownVariableType]
+
     # endregion
 
     # region  QUERIES - proximity
@@ -327,8 +321,8 @@ class NodeRegistry:
     def get_closest(
         self,
         capability: str,
-        location:   tuple[float, float],
-        idle_only:  bool = True,
+        location: tuple[float, float],
+        idle_only: bool = True,
     ) -> str | None:
         """Return closest ACTIVE node with capability to the given location.
 
@@ -341,7 +335,8 @@ class NodeRegistry:
             node_id of the closest matching node, or None if no candidates.
         """
         candidates = [
-            rec for rec in self._nodes.values()
+            rec
+            for rec in self._nodes.values()
             if capability in rec.capabilities
             and rec.status == ACTIVE
             and rec.location is not None
@@ -354,8 +349,8 @@ class NodeRegistry:
     def get_in_zone(
         self,
         capability: str,
-        zone:       str,
-        idle_only:  bool = True,
+        zone: str,
+        idle_only: bool = True,
     ) -> list[str]:
         """Return ACTIVE nodes with capability in the given zone.
 
@@ -368,7 +363,8 @@ class NodeRegistry:
             List of matching node_id strings.
         """
         return [
-            nid for nid, rec in self._nodes.items()
+            nid
+            for nid, rec in self._nodes.items()
             if capability in rec.capabilities
             and rec.status == ACTIVE
             and rec.zone == zone
@@ -376,5 +372,6 @@ class NodeRegistry:
         ]
 
     # endregion
+
 
 # endregion (end of class NodeRegistry)

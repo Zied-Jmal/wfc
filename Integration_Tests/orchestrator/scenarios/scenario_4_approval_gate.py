@@ -11,8 +11,6 @@ COMMAND_PENDING -> operator approval -> dispatch) is identical for all
 IRREVERSIBLE command types.
 """
 
-
-
 from __future__ import annotations
 
 import time
@@ -35,15 +33,15 @@ def build(leader_id: str = "sl-A-01") -> Scenario:
         RuleEngine -> HighSeverityRule -> ESCALATE_FIRE approval path."""
         fire_id: str = str(uuid.uuid4())[:8]
         event: dict[str, Any] = {
-            "event_id":   str(uuid.uuid4()),
+            "event_id": str(uuid.uuid4()),
             "event_type": "FIRE_DETECTED",
-            "timestamp":  time.time(),
-            "source":     "test-harness-sensor",
+            "timestamp": time.time(),
+            "source": "test-harness-sensor",
             "payload": {
-                "fire_id":         fire_id,
-                "zone":            "zone_alpha",
-                "severity":        "HIGH",
-                "sensor_id":       "test-harness-sensor",
+                "fire_id": fire_id,
+                "zone": "zone_alpha",
+                "severity": "HIGH",
+                "sensor_id": "test-harness-sensor",
                 "location_coords": [36.8065, 10.1815],
             },
         }
@@ -130,4 +128,3 @@ def build(leader_id: str = "sl-A-01") -> Scenario:
         ),
         stages=[stage_a, stage_b, stage_c, stage_d],
     )
-

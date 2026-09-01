@@ -15,8 +15,8 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Final
 
-
 # Risk levels
+
 
 class CommandRisklevels(StrEnum):
     """Enumeration of command risk levels for approval gating."""
@@ -28,17 +28,17 @@ class CommandRisklevels(StrEnum):
 
 # Command risk mapping
 COMMAND_RISK: Final[dict[str, CommandRisklevels]] = {
-    "RESPOND_TO_FIRE":    CommandRisklevels.SAFE,
-    "CONTAIN_FIRE":       CommandRisklevels.SAFE,
-    "STAND_DOWN":         CommandRisklevels.SAFE,
-    "REINFORCE_FIRE":     CommandRisklevels.SAFE,
-    "REASSIGN_LEADER":    CommandRisklevels.SAFE,
+    "RESPOND_TO_FIRE": CommandRisklevels.SAFE,
+    "CONTAIN_FIRE": CommandRisklevels.SAFE,
+    "STAND_DOWN": CommandRisklevels.SAFE,
+    "REINFORCE_FIRE": CommandRisklevels.SAFE,
+    "REASSIGN_LEADER": CommandRisklevels.SAFE,
     "CONFIRM_LEADERSHIP": CommandRisklevels.SAFE,
-    "DISPATCH_DRONE":     CommandRisklevels.SAFE,
-    "RECALL_DRONE":       CommandRisklevels.SAFE,
-    "UPDATE_TASK":        CommandRisklevels.SAFE,
-    "PREEMPT_RESOURCE":   CommandRisklevels.DISRUPTIVE,
-    "ESCALATE_FIRE":      CommandRisklevels.IRREVERSIBLE,
-    "ABORT_MISSION":      CommandRisklevels.IRREVERSIBLE,
-    "OVERRIDE_SAFETY":    CommandRisklevels.IRREVERSIBLE,
+    "DISPATCH_DRONE": CommandRisklevels.SAFE,
+    "RECALL_DRONE": CommandRisklevels.SAFE,
+    "UPDATE_TASK": CommandRisklevels.SAFE,
+    "PREEMPT_RESOURCE": CommandRisklevels.DISRUPTIVE,
+    "ESCALATE_FIRE": CommandRisklevels.IRREVERSIBLE,
+    "ABORT_MISSION": CommandRisklevels.IRREVERSIBLE,
+    "OVERRIDE_SAFETY": CommandRisklevels.IRREVERSIBLE,
 }

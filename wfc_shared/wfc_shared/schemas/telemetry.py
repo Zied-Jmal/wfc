@@ -42,6 +42,7 @@ SwarmStatus = Literal["ENGAGING", "CONTAINING", "SUPPRESSING", "WITHDRAWING", "I
 
 # DroneTelemetry
 
+
 class DroneTelemetry(BaseModel):
     """Raw telemetry published by a drone to its leader every 2 s.
 
@@ -132,6 +133,7 @@ class DroneTelemetry(BaseModel):
 
 # SwarmStatusSnapshot
 
+
 class SwarmStatusSnapshot(BaseModel):
     """Aggregated telemetry published by a leader to the commander every 10 s.
 
@@ -184,6 +186,7 @@ class SwarmStatusSnapshot(BaseModel):
 
 
 # FireIntensityUpdate
+
 
 class FireIntensityUpdate(BaseModel):
     """Published when a leader/scout detects a fire intensity change.

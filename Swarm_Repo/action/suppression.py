@@ -13,10 +13,9 @@ import os
 from typing import Final, Self
 
 from action.gps import GPSCoord, destination_point, haversine_distance_m
-from action.movement import DroneMovementEngine, CRUISE_ALTITUDE_M
+from action.movement import CRUISE_ALTITUDE_M, DroneMovementEngine
 from action.resources import PUMP_FLOW_RATE_L_S, DroneResourceModel
 from action.wind import WindModel
-
 
 # -- Suppression flight parameters (configurable via env vars) ---
 DROP_ALTITUDE_M: Final[float] = float(os.getenv("SUPPRESS_DROP_ALTITUDE_M", "20.0"))
@@ -32,20 +31,20 @@ DROP_FALL_TIME_S: Final[float] = math.sqrt(2 * DROP_ALTITUDE_M / GRAVITY_MPS2)
 
 # -- Suppression effectiveness ---------------------------------------
 LITRES_PER_M2_BY_SEVERITY: Final[dict[str, float]] = {
-    "LOW":      0.5,
-    "MEDIUM":   1.2,
-    "HIGH":     2.5,
+    "LOW": 0.5,
+    "MEDIUM": 1.2,
+    "HIGH": 2.5,
     "CRITICAL": 5.0,
 }
 
 
 class SuppressionState:
-    IDLE       = "IDLE"
+    IDLE = "IDLE"
     TRANSITING = "TRANSITING"
-    APPROACH   = "APPROACH"
-    DROPPING   = "DROPPING"
-    EGRESS     = "EGRESS"
-    RETURNING  = "RETURNING"
+    APPROACH = "APPROACH"
+    DROPPING = "DROPPING"
+    EGRESS = "EGRESS"
+    RETURNING = "RETURNING"
 
 
 class SuppressionActionEngine:
@@ -63,11 +62,11 @@ class SuppressionActionEngine:
 
     def __init__(
         self,
-        drone_id:      str,
-        home:          GPSCoord,
-        wind:          WindModel,
-        resources:     DroneResourceModel,
-        payload_type:  str = "water",
+        drone_id: str,
+        home: GPSCoord,
+        wind: WindModel,
+        resources: DroneResourceModel,
+        payload_type: str = "water",
     ) -> None:
         """
         Initialize the suppression action engine.
@@ -93,22 +92,22 @@ class SuppressionActionEngine:
         self._fire_gps: GPSCoord | None = None
         self._severity: str = "MEDIUM"
 
-# Drop tracking
+        # Drop tracking
         self._drop_passes: int = 0
         self._litres_delivered: float = 0.0
         self._last_pass_litres: float = 0.0
 
-# Approach/egress waypoints (computed from wind on each dispatch)
+        # Approach/egress waypoints (computed from wind on each dispatch)
         self._approach_start: GPSCoord | None = None
         self._egress_target: GPSCoord | None = None
 
-# Pump state
+        # Pump state
         self._pump_active: bool = False
 
-# Effectiveness
+        # Effectiveness
         self._fire_area_m2: float | None = None
 
-# region  PUBLIC API
+    # region  PUBLIC API
 
     @property
     def position_gps(self) -> GPSCoord:
@@ -166,8 +165,7 @@ class SuppressionActionEngine:
         req = LITRES_PER_M2_BY_SEVERITY.get(self._severity, 1.2) * self._fire_area_m2
         return round(min(1.0, self._litres_delivered / max(0.1, req)), 3)
 
-    def dispatch_to(self, fire_gps: GPSCoord, severity: str = "MEDIUM",
-                    fire_area_m2: float | None = None) -> Self:
+    def dispatch_to(self, fire_gps: GPSCoord, severity: str = "MEDIUM", fire_area_m2: float | None = None) -> Self:
         """
         Order drone to suppress fire at fire_gps.
 
@@ -181,16 +179,14 @@ class SuppressionActionEngine:
         Returns:
             Self for method chaining.
         """
-        self._fire_gps      = fire_gps
-        self._severity      = severity
-        self._fire_area_m2  = fire_area_m2 or _estimate_fire_area(severity)
-        self._state         = SuppressionState.TRANSITING
-        self._pump_active   = False
+        self._fire_gps = fire_gps
+        self._severity = severity
+        self._fire_area_m2 = fire_area_m2 or _estimate_fire_area(severity)
+        self._state = SuppressionState.TRANSITING
+        self._pump_active = False
 
         self._approach_start = self._compute_approach_start(fire_gps)
-        transit_gps = GPSCoord(self._approach_start.lat_deg,
-                               self._approach_start.lon_deg,
-                               CRUISE_ALTITUDE_M)
+        transit_gps = GPSCoord(self._approach_start.lat_deg, self._approach_start.lon_deg, CRUISE_ALTITUDE_M)
         self._movement.set_waypoint(transit_gps, speed_mps=TRANSIT_SPEED_MPS)
         return self
 
@@ -202,7 +198,7 @@ class SuppressionActionEngine:
             Self for method chaining.
         """
         self._pump_active = False
-        self._state       = SuppressionState.RETURNING
+        self._state = SuppressionState.RETURNING
         self._movement.return_home(speed_mps=TRANSIT_SPEED_MPS)
         return self
 
@@ -237,7 +233,7 @@ class SuppressionActionEngine:
                     DROP_ALTITUDE_M,
                 )
                 self._movement.set_waypoint(fire_drop_gps, speed_mps=APPROACH_SPEED_MPS)
-                self._state       = SuppressionState.DROPPING
+                self._state = SuppressionState.DROPPING
                 self._last_pass_litres = 0.0
 
         elif self._state == SuppressionState.DROPPING:
@@ -253,13 +249,13 @@ class SuppressionActionEngine:
                 self._tick_resources(dt, phase="SUPPRESS", pump=True)
                 if self._resources.payload_litres >= 0:
                     pass_drain = PUMP_FLOW_RATE_L_S * dt
-                    self._last_pass_litres    += pass_drain
-                    self._litres_delivered    += pass_drain
+                    self._last_pass_litres += pass_drain
+                    self._litres_delivered += pass_drain
 
             if self._movement.is_at_waypoint():
-                self._pump_active  = False
+                self._pump_active = False
                 self._drop_passes += 1
-                self._state        = SuppressionState.EGRESS
+                self._state = SuppressionState.EGRESS
                 egress_gps = self._compute_egress_point()
                 self._egress_target = egress_gps
                 self._movement.set_waypoint(
@@ -268,9 +264,9 @@ class SuppressionActionEngine:
                 )
 
             elif self._resources.payload_litres <= 0.0:
-                self._pump_active  = False
+                self._pump_active = False
                 self._drop_passes += 1
-                self._state        = SuppressionState.RETURNING
+                self._state = SuppressionState.RETURNING
                 self._movement.return_home(speed_mps=TRANSIT_SPEED_MPS)
 
         elif self._state == SuppressionState.EGRESS:
@@ -295,9 +291,9 @@ class SuppressionActionEngine:
                 self._state = SuppressionState.IDLE
                 self._resources.service_at_base()
 
-# endregion
+    # endregion
 
-# region  PRIVATE
+    # region  PRIVATE
 
     def _compute_approach_start(self, fire_gps: GPSCoord | None) -> GPSCoord:
         """
@@ -327,6 +323,7 @@ class SuppressionActionEngine:
         Payload drain is handled by DroneResourceModel when pump_active=True.
         """
         self._resources.tick(dt=dt, phase=phase, pump_active=pump, sensors_on=False)
+
 
 # endregion
 

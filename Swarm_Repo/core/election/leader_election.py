@@ -1,22 +1,23 @@
 # core/election/leader_election.py
 """Bully algorithm summary:
 
-    1. Node detects leader heartbeat timeout.
-    2. Node sends ELECTION_START to all higher-ID peers.
-    3. If any higher peer replies ELECTION_OK within timeout,
-       this node steps back (mark_lost) -- a higher node wins.
-    4. If no ELECTION_OK received within timeout, this node
-       declares victory, sends ELECTION_WIN to all peers,
-       then calls on_win().
-    5. A higher-ID node that receives ELECTION_START sends
-       ELECTION_OK and starts its own election.
+1. Node detects leader heartbeat timeout.
+2. Node sends ELECTION_START to all higher-ID peers.
+3. If any higher peer replies ELECTION_OK within timeout,
+   this node steps back (mark_lost) -- a higher node wins.
+4. If no ELECTION_OK received within timeout, this node
+   declares victory, sends ELECTION_WIN to all peers,
+   then calls on_win().
+5. A higher-ID node that receives ELECTION_START sends
+   ELECTION_OK and starts its own election.
 """
 
 from __future__ import annotations
 
 import threading
 import time
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from core.election.election_state import ElectionState
 from core.messaging.mqtt_client import MQTTClient
@@ -67,7 +68,7 @@ class LeaderElection:
         self._timeout = timeout
         self._timer: threading.Timer | None = None
 
-# PUBLIC API
+    # PUBLIC API
 
     def start_election(self) -> None:
         """Initiate a bully election from this node."""
@@ -127,7 +128,7 @@ class LeaderElection:
         else:
             log("LeaderElection", f"unknown election msg type: {msg_type}", channel="SYSTEM")
 
-# PRIVATE -- message handlers
+    # PRIVATE -- message handlers
 
     def _handle_election_start(self, payload: dict[str, Any]) -> None:
         """Respond to ELECTION_START from a lower-ID peer."""
@@ -180,7 +181,7 @@ class LeaderElection:
         )
         self._on_lost()
 
-# PRIVATE -- election outcome
+    # PRIVATE -- election outcome
 
     def _declare_victory(self, term: int) -> None:
         """Broadcast ELECTION_WIN and invoke the win callback."""
@@ -213,9 +214,7 @@ class LeaderElection:
     def _reset_timer(self, term: int) -> None:
         """Cancel any existing timer and start a new one for *term*."""
         self._cancel_timer()
-        self._timer = threading.Timer(
-            self._timeout, self._timeout_handler, args=(term,)
-        )
+        self._timer = threading.Timer(self._timeout, self._timeout_handler, args=(term,))
         self._timer.daemon = True
         self._timer.start()
 

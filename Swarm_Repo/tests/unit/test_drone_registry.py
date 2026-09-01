@@ -1,19 +1,26 @@
 # TEST: U-DRONE-001, U-DRONE-002
 
 import time
+
 from wfc_shared.schemas.telemetry import DroneTelemetry
+
 
 class TestDroneRegistry:
     def test_role_inference_from_thermal_sensor(self):
         from core.state.drone_registry import DroneRegistry
+
         reg = DroneRegistry()
 
         telem = DroneTelemetry(
-            drone_id="sd-99", leader_id="sl-1", timestamp=time.time(),
+            drone_id="sd-99",
+            leader_id="sl-1",
+            timestamp=time.time(),
             position=(36.8, 10.18),
-            battery_wh=200.0, battery_pct=0.85,
+            battery_wh=200.0,
+            battery_pct=0.85,
             thermal_peak_temp_c=300.0,
-            task="SCOUTING", connectivity="STRONG",
+            task="SCOUTING",
+            connectivity="STRONG",
         )
         reg.update_telemetry("sd-99", telem)
 
@@ -22,14 +29,19 @@ class TestDroneRegistry:
 
     def test_role_inference_from_payload(self):
         from core.state.drone_registry import DroneRegistry
+
         reg = DroneRegistry()
 
         telem = DroneTelemetry(
-            drone_id="fd-99", leader_id="sl-1", timestamp=time.time(),
+            drone_id="fd-99",
+            leader_id="sl-1",
+            timestamp=time.time(),
             position=(36.8, 10.18),
-            battery_wh=200.0, battery_pct=0.85,
+            battery_wh=200.0,
+            battery_pct=0.85,
             payload_litres=5.0,
-            task="SUPPRESSING", connectivity="STRONG",
+            task="SUPPRESSING",
+            connectivity="STRONG",
         )
         reg.update_telemetry("fd-99", telem)
 
@@ -38,17 +50,22 @@ class TestDroneRegistry:
 
     def test_get_lost_based_on_last_seen_not_connectivity(self):
         from core.state.drone_registry import DroneRegistry
+
         reg = DroneRegistry(stale_threshold=5.0)
 
         telem = DroneTelemetry(
-            drone_id="sd-1", leader_id="sl-1", timestamp=time.time() - 6,
+            drone_id="sd-1",
+            leader_id="sl-1",
+            timestamp=time.time() - 6,
             position=(36.8, 10.18),
-            battery_wh=200.0, battery_pct=0.85,
+            battery_wh=200.0,
+            battery_pct=0.85,
             thermal_peak_temp_c=300.0,
-            task="SCOUTING", connectivity="STRONG",
+            task="SCOUTING",
+            connectivity="STRONG",
         )
         reg.update_telemetry("sd-1", telem)
-# Directly set last_seen to be old
+        # Directly set last_seen to be old
         with reg._lock:  # pyright: ignore[reportPrivateUsage]
             reg._drones["sd-1"].last_seen = time.time() - 6  # pyright: ignore[reportPrivateUsage]
 

@@ -5,15 +5,15 @@ NodeRepository - persistence for NodeRecord rows
 """
 
 from __future__ import annotations
-from typing import Any
 
 import json
+from typing import Any
 
 from core.persistence.database import Database
 from wfc_shared.schemas.nodes import NodeRecord
 
-class NodeRepository:
 
+class NodeRepository:
     """Persistence layer for NodeRecord rows.
 
     One row per node_id (snapshot model). Re-registrations, heartbeats,
@@ -84,11 +84,11 @@ class NodeRepository:
         """Reconstruct a NodeRecord from a SQLite row dict."""
         keys = row.keys()
         data: dict[str, Any] = {
-            "node_id":       row["node_id"],
-            "node_type":     row["node_type"],
-            "capabilities":  json.loads(row["capabilities"]),
-            "status":        row["status"],
-            "last_seen":     row["last_seen"],
+            "node_id": row["node_id"],
+            "node_type": row["node_type"],
+            "capabilities": json.loads(row["capabilities"]),
+            "status": row["status"],
+            "last_seen": row["last_seen"],
             "registered_at": row["registered_at"],
         }
         if "zone" in keys and row["zone"] is not None:

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
-class EvalTrigger(str, Enum):
+
+class EvalTrigger(StrEnum):
     NEW_FIRE = "new_fire"
     REDISPATCH = "redispatch"
     NODE_AVAILABLE = "node_available"

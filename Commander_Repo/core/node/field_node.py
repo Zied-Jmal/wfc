@@ -7,16 +7,15 @@ It is purely a command receiver and ACK publisher.
 
 from __future__ import annotations
 
-
 import time
 from abc import abstractmethod
 from typing import Any, Final
 
-from core.node.base_node import BaseNode
-from wfc_shared.enums.command_types import RESPOND_TO_FIRE, STAND_DOWN, CONTAIN_FIRE
-from wfc_shared.enums.topics import command_topic, ACK
 from core.commands_monitor.lifecycle_rules import STATUS_TO_EVENT_TYPE
+from core.node.base_node import BaseNode
 from core.utils.logger import log
+from wfc_shared.enums.command_types import CONTAIN_FIRE, RESPOND_TO_FIRE, STAND_DOWN
+from wfc_shared.enums.topics import ACK, command_topic
 
 # ack status values (human-readable, used in logs/dashboard)
 _RECEIVED: Final = "RECEIVED"
@@ -26,8 +25,8 @@ _FAILED: Final = "FAILED"
 
 # region  CLASS - FieldNode
 
-class FieldNode(BaseNode):
 
+class FieldNode(BaseNode):
     """Lightweight base for all field responder nodes (swarm leaders,
     drones, infra nodes). Concrete subclasses implement
     _execute_command() and nothing else is required.
@@ -57,9 +56,7 @@ class FieldNode(BaseNode):
         self.mqtt.subscribe(command_topic(self.node_id), qos=1)
         log(
             self.__class__.__name__,
-            f"{self.node_id} ready - "
-            f"zone={self.zone} location={self.location} "
-            f"caps={self.capabilities}",
+            f"{self.node_id} ready - zone={self.zone} location={self.location} caps={self.capabilities}",
             channel="SYSTEM",
         )
 
@@ -78,12 +75,11 @@ class FieldNode(BaseNode):
     # region  COMMAND PROTOCOL
 
     def _handle_command(self, payload: dict[str, Any]) -> None:
-        trace_id     = payload.get("trace_id")
+        trace_id = payload.get("trace_id")
         command_type = payload.get("command_type")
 
         if not trace_id:
-            log(self.__class__.__name__,
-                "command missing trace_id - skipped", channel="SYSTEM")
+            log(self.__class__.__name__, "command missing trace_id - skipped", channel="SYSTEM")
             return
 
         # dedup - Checked BEFORE execution but only ADDED to the set on success (below) - a command
@@ -96,21 +92,21 @@ class FieldNode(BaseNode):
         # concurrently. If this class is ever driven by a different,
         # multi-threaded message loop, this check would need a lock.
         if trace_id in self._handled_trace_ids:
-            log(self.__class__.__name__,
+            log(
+                self.__class__.__name__,
                 f"duplicate command trace={trace_id[:8]} - already handled, skipped",
-                channel="SYSTEM")
+                channel="SYSTEM",
+            )
             self._send_ack(trace_id, _EXECUTED)
             return
 
-        log(self.__class__.__name__,
-            f"received {command_type} trace={trace_id[:8]}", channel="SYSTEM")
+        log(self.__class__.__name__, f"received {command_type} trace={trace_id[:8]}", channel="SYSTEM")
 
         self._send_ack(trace_id, _RECEIVED)
 
         known = {RESPOND_TO_FIRE, STAND_DOWN, CONTAIN_FIRE}
         if command_type not in known:
-            log(self.__class__.__name__,
-                f"unknown command type: {command_type} - skipped", channel="SYSTEM")
+            log(self.__class__.__name__, f"unknown command type: {command_type} - skipped", channel="SYSTEM")
             # Still send EXECUTED so the tracker doesn't hang waiting
             self._send_ack(trace_id, _EXECUTED)
             return
@@ -121,8 +117,7 @@ class FieldNode(BaseNode):
             self._handled_trace_ids.add(trace_id)
             self._send_ack(trace_id, _EXECUTED)
         except Exception as exc:
-            log(self.__class__.__name__,
-                f"command execution failed: {exc}", channel="SYSTEM")
+            log(self.__class__.__name__, f"command execution failed: {exc}", channel="SYSTEM")
             self._send_ack(trace_id, _FAILED)
 
     # endregion
@@ -132,9 +127,9 @@ class FieldNode(BaseNode):
     @abstractmethod
     def _execute_command(
         self,
-        command_type:  str,
-        fire_payload:  dict[str, Any],
-        trace_id:      str,
+        command_type: str,
+        fire_payload: dict[str, Any],
+        trace_id: str,
     ) -> None:
         """Execute one command. Called after RECEIVED ack, before EXECUTED ack.
 
@@ -160,21 +155,25 @@ class FieldNode(BaseNode):
         correctly deduped by the tracker.
         """
         event_type = STATUS_TO_EVENT_TYPE.get(status, status)
-        event_id   = f"{trace_id}:{status}"
+        event_id = f"{trace_id}:{status}"
         # qos=1 - an ACK is what tells the commander a command
         # actually landed; losing it silently is what caused commands
         # to get stuck at ISSUED forever.
-        self.mqtt.publish(ACK, {
-            "trace_id":   trace_id,
-            "node_id":    self.node_id,
-            "status":     status,
-            "event_type": event_type,
-            "event_id":   event_id,
-            "timestamp":  time.time(),
-        }, qos=1)
-        log(self.__class__.__name__,
-            f"ACK {status} trace={trace_id[:8]}", channel="SYSTEM")
+        self.mqtt.publish(
+            ACK,
+            {
+                "trace_id": trace_id,
+                "node_id": self.node_id,
+                "status": status,
+                "event_type": event_type,
+                "event_id": event_id,
+                "timestamp": time.time(),
+            },
+            qos=1,
+        )
+        log(self.__class__.__name__, f"ACK {status} trace={trace_id[:8]}", channel="SYSTEM")
 
     # endregion
+
 
 # endregion (end of class FieldNode)

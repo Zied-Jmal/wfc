@@ -37,15 +37,15 @@ def build(leader_id: str = "sl-A-01") -> Scenario:
         """Published when Stage A starts \u2014 simulates a ground sensor."""
         fire_id: str = str(uuid.uuid4())[:8]
         payload: dict[str, Any] = {
-            "event_id":   str(uuid.uuid4()),
+            "event_id": str(uuid.uuid4()),
             "event_type": "FIRE_DETECTED",
-            "timestamp":  time.time(),
-            "source":     "test-harness-sensor",
+            "timestamp": time.time(),
+            "source": "test-harness-sensor",
             "payload": {
-                "fire_id":         fire_id,
-                "zone":            "zone_alpha",
-                "severity":        "HIGH",
-                "sensor_id":       "test-harness-sensor",
+                "fire_id": fire_id,
+                "zone": "zone_alpha",
+                "severity": "HIGH",
+                "sensor_id": "test-harness-sensor",
                 "location_coords": [36.8065, 10.1815],
             },
         }
@@ -177,7 +177,8 @@ def _synthetic_respond_to_fire(ctx: dict[str, Any], leader_id: str) -> dict[str,
             "from": "test-harness-skip-injector",
             "timestamp": time.time(),
         },
-        1, False,
+        1,
+        False,
     )
     return {"trace_id_a": trace_id, "skip_injected_stage_a": True}
 
@@ -198,6 +199,7 @@ def _synthetic_drone_command(ctx: dict[str, Any]) -> dict[str, Any]:
             "from": "test-harness-skip-injector",
             "timestamp": time.time(),
         },
-        1, False,
+        1,
+        False,
     )
     return {"drone_id": drone_id, "drone_trace_id": trace_id, "skip_injected_stage_c": True}

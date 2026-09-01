@@ -6,11 +6,12 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-from typing import Any, AsyncGenerator, Final
+from collections.abc import AsyncGenerator
+from typing import Any, Final
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, StreamingResponse, Response
+from fastapi.responses import HTMLResponse, Response, StreamingResponse
 
 from dashboard.state import swarm_state
 
@@ -34,13 +35,7 @@ map_app.add_middleware(
 async def config_js() -> Response:
     """Serve configuration variables used by the map JavaScript."""
 
-    js = (
-        f'window.WFC_CONFIG = {{'
-        f'"MQTT_WS_HOST":"{MQTT_WS_HOST}",'
-        f'"MQTT_WS_PORT":{MQTT_WS_PORT},'
-        f'"MAP_PORT":{MAP_PORT}'
-        f'}};'
-    )
+    js = f'window.WFC_CONFIG = {{"MQTT_WS_HOST":"{MQTT_WS_HOST}","MQTT_WS_PORT":{MQTT_WS_PORT},"MAP_PORT":{MAP_PORT}}};'
     return Response(content=js, media_type="application/javascript")
 
 
@@ -54,12 +49,13 @@ async def snapshot() -> dict[str, Any]:
 @map_app.get("/api/stream")
 async def map_stream(request: Request) -> StreamingResponse:
     """Server‑sent events: pushes updated snapshots every 500 ms."""
-    async def generator() -> AsyncGenerator[str, None]:
+
+    async def generator() -> AsyncGenerator[str]:
         while True:
             if await request.is_disconnected():
                 break
             yield f"data: {json.dumps(swarm_state.snapshot())}\n\n"
-            await asyncio.sleep(0.5)   # 2 Hz refresh for smooth map
+            await asyncio.sleep(0.5)  # 2 Hz refresh for smooth map
 
     return StreamingResponse(
         generator(),
@@ -76,6 +72,7 @@ async def map_stream(request: Request) -> StreamingResponse:
 async def map_page() -> str:
     """Render the live map template."""
     import os
+
     template_path = os.path.join(os.path.dirname(__file__), "templates", "map.html")
     with open(template_path, encoding="utf-8") as f:
         return f.read()

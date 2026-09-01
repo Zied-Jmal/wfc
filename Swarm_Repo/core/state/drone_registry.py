@@ -6,19 +6,18 @@ import threading
 import time
 from dataclasses import dataclass, field
 
-
-from wfc_shared.schemas.telemetry import DroneTelemetry
 from core.utils.logger import log
+from wfc_shared.schemas.telemetry import DroneTelemetry
 
 
 @dataclass
 class DroneRecord:
-    drone_id:          str
-    role:              str                      # SCOUT | FIREFIGHTING
-    location:          tuple[float, float]
-    last_telemetry:    DroneTelemetry | None = None
-    last_seen:         float                    = field(default_factory=time.time)
-    registered_at:     float                    = field(default_factory=time.time)
+    drone_id: str
+    role: str  # SCOUT | FIREFIGHTING
+    location: tuple[float, float]
+    last_telemetry: DroneTelemetry | None = None
+    last_seen: float = field(default_factory=time.time)
+    registered_at: float = field(default_factory=time.time)
 
 
 class DroneRegistry:
@@ -26,13 +25,12 @@ class DroneRegistry:
     Thread-safe. The commander never sees this directly.
     """
 
-
     def __init__(self, stale_threshold: float = 5.0) -> None:
-        self._lock             = threading.Lock()
-        self._drones:          dict[str, DroneRecord] = {}
-        self._stale_threshold  = stale_threshold
+        self._lock = threading.Lock()
+        self._drones: dict[str, DroneRecord] = {}
+        self._stale_threshold = stale_threshold
 
-# REGISTRATION
+    # REGISTRATION
 
     def register(self, drone_id: str, role: str, location: tuple[float, float]) -> None:
         with self._lock:
@@ -42,8 +40,7 @@ class DroneRegistry:
                     role=role,
                     location=location,
                 )
-                log("DroneRegistry",
-                    f"registered {drone_id} role={role}", channel="REGISTRY")
+                log("DroneRegistry", f"registered {drone_id} role={role}", channel="REGISTRY")
 
     def unregister(self, drone_id: str) -> None:
         with self._lock:
@@ -51,7 +48,7 @@ class DroneRegistry:
                 del self._drones[drone_id]
                 log("DroneRegistry", f"unregistered {drone_id}", channel="REGISTRY")
 
-# TELEMETRY UPDATE
+    # TELEMETRY UPDATE
 
     def update_telemetry(self, drone_id: str, telem: DroneTelemetry) -> None:
         with self._lock:
@@ -69,10 +66,10 @@ class DroneRegistry:
                 )
             rec = self._drones[drone_id]
             rec.last_telemetry = telem
-            rec.last_seen      = time.time()
-            rec.location       = telem.position
+            rec.last_seen = time.time()
+            rec.location = telem.position
 
-# QUERIES
+    # QUERIES
 
     def get_all(self) -> list[DroneRecord]:
         with self._lock:
@@ -85,25 +82,17 @@ class DroneRegistry:
     def get_active(self) -> list[DroneRecord]:
         with self._lock:
             return [
-                d for d in self._drones.values()
-                if d.last_telemetry is None
-                or d.last_telemetry.connectivity != "LOST"
+                d for d in self._drones.values() if d.last_telemetry is None or d.last_telemetry.connectivity != "LOST"
             ]
 
     def get_lost(self) -> list[DroneRecord]:
         now = time.time()
         with self._lock:
-            return [
-                d for d in self._drones.values()
-                if (now - d.last_seen) > self._stale_threshold
-            ]
+            return [d for d in self._drones.values() if (now - d.last_seen) > self._stale_threshold]
 
     def get_idle(self) -> list[DroneRecord]:
         with self._lock:
-            return [
-                d for d in self._drones.values()
-                if d.last_telemetry and d.last_telemetry.task == "IDLE"
-            ]
+            return [d for d in self._drones.values() if d.last_telemetry and d.last_telemetry.task == "IDLE"]
 
     def get(self, drone_id: str) -> DroneRecord | None:
         with self._lock:

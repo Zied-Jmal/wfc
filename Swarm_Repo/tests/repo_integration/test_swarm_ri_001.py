@@ -1,10 +1,16 @@
 # RI-SWARM-001: Swarm leader dispatches drone command on receiving RESPOND_TO_FIRE
 
-import threading, json, time, uuid
+import json
+import threading
+import time
+import uuid
 from typing import Any
 
+
 class TestSwarmLeaderDispatch:
-    def test_dispatched_command_reaches_drone_topic(self, mosquitto_broker: tuple[str, int], env_setup: Any, tmp_path: Any) -> None:
+    def test_dispatched_command_reaches_drone_topic(
+        self, mosquitto_broker: tuple[str, int], env_setup: Any, tmp_path: Any
+    ) -> None:
         host, port = mosquitto_broker  # pyright: ignore[reportUnknownVariableType]
         import paho.mqtt.client as mqtt
 
@@ -27,10 +33,13 @@ class TestSwarmLeaderDispatch:
         sub.loop_start()
 
         from core.node.swarm_leader_node import SwarmLeaderNode
+
         leader = SwarmLeaderNode(
-            node_id="sl-test-01", zone="zone_alpha",
+            node_id="sl-test-01",
+            zone="zone_alpha",
             location=(36.8065, 10.1815),
-            backup_peers=[], is_backup=False,
+            backup_peers=[],
+            is_backup=False,
         )
         leader.start()
         time.sleep(1.5)
@@ -40,9 +49,11 @@ class TestSwarmLeaderDispatch:
 
         drone_id = "sd-test-99"
         announcement = {
-            "node_id": drone_id, "node_type": "SCOUT_DRONE",
+            "node_id": drone_id,
+            "node_type": "SCOUT_DRONE",
             "capabilities": ["SCOUT", "HEARTBEAT"],
-            "status": "ONLINE", "zone": "zone_alpha",
+            "status": "ONLINE",
+            "zone": "zone_alpha",
             "location": [36.8070, 10.1825],
         }
         pub.publish(f"wfc/registry/announce/{drone_id}", json.dumps(announcement), qos=1, retain=True)
@@ -74,7 +85,6 @@ class TestSwarmLeaderDispatch:
         if not ok:
             print(f"[DEBUG] drone_cmd received: {drone_cmd}")
 
-        assert ok, f"No drone command published to wfc/command/+ within 15s"
+        assert ok, "No drone command published to wfc/command/+ within 15s"
         ct: str = drone_cmd["payload"].get("command_type", "")  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
-        assert ct in ("DISPATCH_DRONE", "UPDATE_TASK", "RECALL_DRONE"), \
-            f"Expected drone command type, got {ct}"
+        assert ct in ("DISPATCH_DRONE", "UPDATE_TASK", "RECALL_DRONE"), f"Expected drone command type, got {ct}"

@@ -14,8 +14,8 @@ def _load_env_file() -> None:
     """Load environment file based on ENV setting."""
 
     mapping = {
-        "test":   ".env.test",
-        "prod":   ".env.prod",
+        "test": ".env.test",
+        "prod": ".env.prod",
         "docker": ".env.docker",
     }
     load_dotenv(mapping.get(ENV, ".env"), override=False)
@@ -25,6 +25,7 @@ _load_env_file()
 
 
 # MQTT
+
 
 def get_mqtt_host() -> str:
     """Return MQTT broker hostname from MQTT_HOST env var (default: localhost)."""
@@ -37,6 +38,7 @@ def get_mqtt_port() -> int:
 
 
 # Node identity
+
 
 def get_node_id() -> str:
     """Return node id from NODE_ID env var (default: swarm-node-01)."""
@@ -85,6 +87,7 @@ def get_node_gps() -> Any:  # pyright: ignore[reportUnknownParameterType]
     Import is deferred to avoid circular imports at module load time.
     """
     from action.gps import GPSCoord
+
     loc = get_node_location()
     alt = get_home_alt_m()
     if loc is None:
@@ -93,6 +96,7 @@ def get_node_gps() -> Any:  # pyright: ignore[reportUnknownParameterType]
 
 
 # Wind model initialisation
+
 
 def get_wind_speed_mps() -> float:
     """
@@ -129,6 +133,7 @@ def get_turbulence() -> str:
 
 # Drone resource initialisation
 
+
 def get_payload_type() -> str:
     """
     Return liquid suppressant type from PAYLOAD_TYPE env var.
@@ -162,6 +167,7 @@ def get_initial_battery_wh() -> float:
 
 
 # Swarm-specific (unchanged from V1)
+
 
 def get_leader_id() -> str:
     """Return leader node id from LEADER_ID env var (default: sl-A-01)."""
@@ -197,6 +203,7 @@ def get_election_timeout() -> float:
 
 
 # Suppression flight parameters (firefighting drone)
+
 
 def get_drop_altitude_m() -> float:
     """Return suppression drop altitude in metres (default: 20.0)."""

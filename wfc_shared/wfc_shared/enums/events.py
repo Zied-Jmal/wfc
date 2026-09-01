@@ -13,6 +13,7 @@ Categories
 
 
 """
+
 from __future__ import annotations
 
 from typing import Final
@@ -41,10 +42,10 @@ NODE_REGISTERED: Final[str] = "NODE_REGISTERED"
 NODE_RECOVERED: Final[str] = "NODE_RECOVERED"
 
 # Fire events
-FIRE_DETECTED: Final[str] = "FIRE_DETECTED"         # sensor: initial detection
-FIRE_SUPPRESSED: Final[str] = "FIRE_SUPPRESSED"       # fire being extinguished
-FIRE_CONTAINED: Final[str] = "FIRE_CONTAINED"        # perimeter held
+FIRE_DETECTED: Final[str] = "FIRE_DETECTED"  # sensor: initial detection
+FIRE_SUPPRESSED: Final[str] = "FIRE_SUPPRESSED"  # fire being extinguished
+FIRE_CONTAINED: Final[str] = "FIRE_CONTAINED"  # perimeter held
 FIRE_INTENSITY_UPDATE: Final[str] = "FIRE_INTENSITY_UPDATE"  # scout: severity changed
-FIRE_REKINDLED: Final[str] = "FIRE_REKINDLED"        # previously suppressed; re-ignited
-FIRE_VERIFIED: Final[str] = "FIRE_VERIFIED"         # scout confirmed initial detection
-FIRE_PERIMETER_UPDATE: Final[str] = "FIRE_PERIMETER_UPDATE" # leader: perimeter estimate updated
+FIRE_REKINDLED: Final[str] = "FIRE_REKINDLED"  # previously suppressed; re-ignited
+FIRE_VERIFIED: Final[str] = "FIRE_VERIFIED"  # scout confirmed initial detection
+FIRE_PERIMETER_UPDATE: Final[str] = "FIRE_PERIMETER_UPDATE"  # leader: perimeter estimate updated

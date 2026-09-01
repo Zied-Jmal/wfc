@@ -23,9 +23,9 @@ import math
 from dataclasses import dataclass
 
 # WGS-84 ellipsoid constants
-EARTH_RADIUS_M  = 6_371_000.0   # mean spherical radius (m) - sufficient for < 500 km
-DEG_TO_RAD      = math.pi / 180.0
-RAD_TO_DEG      = 180.0 / math.pi
+EARTH_RADIUS_M = 6_371_000.0  # mean spherical radius (m) - sufficient for < 500 km
+DEG_TO_RAD = math.pi / 180.0
+RAD_TO_DEG = 180.0 / math.pi
 
 
 @dataclass(frozen=True)
@@ -40,14 +40,12 @@ class GPSCoord:
 
     lat_deg: float
     lon_deg: float
-    alt_m:   float = 0.0
+    alt_m: float = 0.0
 
     def __repr__(self) -> str:
         ns = "N" if self.lat_deg >= 0 else "S"
         ew = "E" if self.lon_deg >= 0 else "W"
-        return (f"GPSCoord({abs(self.lat_deg):.6f}{ns}, "
-                f"{abs(self.lon_deg):.6f}{ew}, "
-                f"{self.alt_m:.1f} m AMSL)")
+        return f"GPSCoord({abs(self.lat_deg):.6f}{ns}, {abs(self.lon_deg):.6f}{ew}, {self.alt_m:.1f} m AMSL)"
 
     def as_tuple(self) -> tuple[float, float, float]:
         """(lat_deg, lon_deg, alt_m)"""
@@ -74,7 +72,7 @@ def haversine_distance_m(a: GPSCoord, b: GPSCoord) -> float:
 def distance_3d_m(a: GPSCoord, b: GPSCoord) -> float:
     """Euclidean 3-D distance including altitude difference (metres)."""
     horiz = haversine_distance_m(a, b)
-    dalt  = b.alt_m - a.alt_m
+    dalt = b.alt_m - a.alt_m
     return math.sqrt(horiz * horiz + dalt * dalt)
 
 
@@ -86,8 +84,8 @@ def initial_bearing_deg(a: GPSCoord, b: GPSCoord) -> float:
     lat1 = a.lat_deg * DEG_TO_RAD
     lat2 = b.lat_deg * DEG_TO_RAD
     dlon = (b.lon_deg - a.lon_deg) * DEG_TO_RAD
-    x    = math.sin(dlon) * math.cos(lat2)
-    y    = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dlon)
+    x = math.sin(dlon) * math.cos(lat2)
+    y = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dlon)
     return (math.atan2(x, y) * RAD_TO_DEG) % 360.0
 
 
@@ -97,14 +95,11 @@ def destination_point(origin: GPSCoord, bearing_deg: float, distance_m: float) -
     Altitude is preserved from origin (caller adjusts alt separately).
     """
     ang_dist = distance_m / EARTH_RADIUS_M
-    bear     = bearing_deg * DEG_TO_RAD
-    lat1     = origin.lat_deg * DEG_TO_RAD
-    lon1     = origin.lon_deg * DEG_TO_RAD
+    bear = bearing_deg * DEG_TO_RAD
+    lat1 = origin.lat_deg * DEG_TO_RAD
+    lon1 = origin.lon_deg * DEG_TO_RAD
 
-    lat2 = math.asin(
-        math.sin(lat1) * math.cos(ang_dist)
-        + math.cos(lat1) * math.sin(ang_dist) * math.cos(bear)
-    )
+    lat2 = math.asin(math.sin(lat1) * math.cos(ang_dist) + math.cos(lat1) * math.sin(ang_dist) * math.cos(bear))
     lon2 = lon1 + math.atan2(
         math.sin(bear) * math.sin(ang_dist) * math.cos(lat1),
         math.cos(ang_dist) - math.sin(lat1) * math.sin(lat2),
@@ -113,6 +108,7 @@ def destination_point(origin: GPSCoord, bearing_deg: float, distance_m: float) -
 
 
 # NED GPS conversions (flat-earth approximation, valid < ~10 km)
+
 
 def ned_to_gps(origin: GPSCoord, north_m: float, east_m: float, down_m: float) -> GPSCoord:
     """Convert NED offset (metres) from origin to WGS-84 coordinate.
@@ -128,8 +124,8 @@ def ned_to_gps(origin: GPSCoord, north_m: float, east_m: float, down_m: float) -
     metres_per_deg_lon = 111_320.0 * math.cos(origin.lat_deg * DEG_TO_RAD)
 
     lat = origin.lat_deg + north_m / metres_per_deg_lat
-    lon = origin.lon_deg + east_m  / metres_per_deg_lon
-    alt = origin.alt_m  - down_m   # NED down is positive downward
+    lon = origin.lon_deg + east_m / metres_per_deg_lon
+    alt = origin.alt_m - down_m  # NED down is positive downward
 
     return GPSCoord(lat, lon, alt)
 
@@ -143,7 +139,7 @@ def gps_to_ned(origin: GPSCoord, point: GPSCoord) -> tuple[float, float, float]:
     metres_per_deg_lon = 111_320.0 * math.cos(origin.lat_deg * DEG_TO_RAD)
     north_m = (point.lat_deg - origin.lat_deg) * metres_per_deg_lat
     east_m = (point.lon_deg - origin.lon_deg) * metres_per_deg_lon
-    down_m = -(point.alt_m - origin.alt_m) # altitude up NED down negative
+    down_m = -(point.alt_m - origin.alt_m)  # altitude up NED down negative
     return (north_m, east_m, down_m)
 
 
@@ -157,11 +153,12 @@ def add_gps_noise(coord: GPSCoord, sigma_h_m: float = 1.5, sigma_v_m: float = 2.
     Uses Box-Muller transform for Gaussian noise (no scipy dependency).
     """
     import random as _r
+
     # Box-Muller: convert uniform to Gaussian
     def _gauss(sigma: float) -> float:
         u1 = max(1e-10, _r.random())
         u2 = _r.random()
-        z  = math.sqrt(-2 * math.log(u1)) * math.cos(2 * math.pi * u2)
+        z = math.sqrt(-2 * math.log(u1)) * math.cos(2 * math.pi * u2)
         return z * sigma
 
     metres_per_deg_lat = 111_320.0
@@ -169,6 +166,6 @@ def add_gps_noise(coord: GPSCoord, sigma_h_m: float = 1.5, sigma_v_m: float = 2.
 
     noisy_lat = coord.lat_deg + _gauss(sigma_h_m) / metres_per_deg_lat
     noisy_lon = coord.lon_deg + _gauss(sigma_h_m) / metres_per_deg_lon
-    noisy_alt = coord.alt_m   + _gauss(sigma_v_m)
+    noisy_alt = coord.alt_m + _gauss(sigma_v_m)
 
     return GPSCoord(noisy_lat, noisy_lon, noisy_alt)

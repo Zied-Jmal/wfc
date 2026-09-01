@@ -2,11 +2,12 @@
 # F9 fix: uses cur.rowcount instead of cur.lastrowid
 # to detect ignored duplicates.
 from __future__ import annotations
-from typing import Any
 
 import json
+from typing import Any
 
 from wfc_shared.schemas.domain_event import DomainEvent
+
 
 class DomainEventRepository:
     """Thin data-access object for the domain_events table.
@@ -16,10 +17,10 @@ class DomainEventRepository:
     DomainEventLog exposes as DomainEvent.sequence.
     """
 
-    def __init__(self, db: Any)  -> None:
+    def __init__(self, db: Any) -> None:
         self._db = db
 
-# WRITE
+    # WRITE
 
     def insert(self, event: DomainEvent) -> DomainEvent:
         """Persist event and return it with .sequence set.
@@ -48,11 +49,11 @@ class DomainEventRepository:
             ),
         )
 
-# rowcount == 1 means new row inserted; 0 means duplicate ignored.
+        # rowcount == 1 means new row inserted; 0 means duplicate ignored.
         if cur.rowcount == 1:
             return event.model_copy(update={"sequence": cur.lastrowid})
 
-# Duplicate: fetch the existing sequence from the database.
+        # Duplicate: fetch the existing sequence from the database.
         row = self._db.query_one(
             "SELECT id FROM domain_events WHERE event_id = ?",
             (event.event_id,),
@@ -60,19 +61,19 @@ class DomainEventRepository:
         seq = row["id"] if row else None
         return event.model_copy(update={"sequence": seq})
 
-# READ
+    # READ
 
     def _row_to_event(self, row: Any) -> DomainEvent:
         return DomainEvent(
-            event_id   = row["event_id"],
-            event_type = row["event_type"],
-            fire_id    = row["fire_id"],
-            node_id    = row["node_id"],
-            reason     = row["reason"],
-            payload    = json.loads(row["payload_json"] or "{}"),
-            sequence   = row["id"],
-            timestamp  = row["timestamp"],
-            source     = row["source"],
+            event_id=row["event_id"],
+            event_type=row["event_type"],
+            fire_id=row["fire_id"],
+            node_id=row["node_id"],
+            reason=row["reason"],
+            payload=json.loads(row["payload_json"] or "{}"),
+            sequence=row["id"],
+            timestamp=row["timestamp"],
+            source=row["source"],
         )
 
     def get_by_fire_id(self, fire_id: str) -> list[DomainEvent]:
@@ -82,9 +83,7 @@ class DomainEventRepository:
         )
         return [self._row_to_event(r) for r in rows]
 
-    def get_last(
-        self, fire_id: str, event_type: str | None = None
-    ) -> DomainEvent | None:
+    def get_last(self, fire_id: str, event_type: str | None = None) -> DomainEvent | None:
         if event_type:
             row = self._db.query_one(
                 """SELECT * FROM domain_events

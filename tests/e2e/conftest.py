@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import socket
@@ -9,7 +10,8 @@ import tempfile
 import threading
 import time
 import uuid
-from typing import Any, Generator
+from collections.abc import Generator
+from typing import Any
 
 import paho.mqtt.client as mqtt
 import pytest
@@ -49,6 +51,7 @@ def _wait_announce(host: str, port: int, node_id: str, timeout: int = 20) -> Non
 
 def _wait_http(host: str, port: int, path: str = "/api/nodes", timeout: int = 15) -> None:
     import requests as req
+
     deadline: float = time.time() + timeout
     while time.time() < deadline:
         try:
@@ -61,12 +64,15 @@ def _wait_http(host: str, port: int, path: str = "/api/nodes", timeout: int = 15
 
 
 def _start_process(
-    cwd: str, cmd_args: list[str], env_updates: dict[str, str],
-    host: str, port: int, node_id: str,
+    cwd: str,
+    cmd_args: list[str],
+    env_updates: dict[str, str],
+    host: str,
+    port: int,
+    node_id: str,
 ) -> subprocess.Popen[bytes]:
     env: dict[str, str] = {**os.environ, "MQTT_HOST": host, "MQTT_PORT": str(port), **env_updates}
-    proc = subprocess.Popen(cmd_args, cwd=cwd, env=env,
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    proc = subprocess.Popen(cmd_args, cwd=cwd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         _wait_announce(host, port, node_id)
     except Exception:
@@ -81,17 +87,30 @@ def pytest_configure(config: Config) -> None:
 
 
 @pytest.fixture(scope="session")
-def mosquitto_broker() -> Generator[tuple[str, int], None, None]:
+def mosquitto_broker() -> Generator[tuple[str, int]]:
     name: str = "wfc-e2e-test-mqtt"
     port: int = _free_port()
     subprocess.run(["docker", "rm", "-f", name], capture_output=True)
-    conf = tempfile.NamedTemporaryFile(mode="w", suffix=".conf", delete=False)
+    conf = tempfile.NamedTemporaryFile(mode="w", suffix=".conf", delete=False)  # noqa: SIM115 (delete=False requires explicit close)
     conf.write("listener 1883\nallow_anonymous true\nlistener 9001\nprotocol websockets\n")
     conf.close()
     conf_path: str = conf.name.replace("\\", "/")
-    subprocess.run(["docker", "run", "-d", "--name", name, "-p", f"{port}:1883",
-                    "-v", f"{conf_path}:/mosquitto/config/mosquitto.conf:ro",
-                    MOSQUITTO_IMAGE], check=True, capture_output=True)
+    subprocess.run(
+        [
+            "docker",
+            "run",
+            "-d",
+            "--name",
+            name,
+            "-p",
+            f"{port}:1883",
+            "-v",
+            f"{conf_path}:/mosquitto/config/mosquitto.conf:ro",
+            MOSQUITTO_IMAGE,
+        ],
+        check=True,
+        capture_output=True,
+    )
     host: str = "127.0.0.1"
     for _ in range(30):
         try:
@@ -114,7 +133,7 @@ def mosquitto_broker() -> Generator[tuple[str, int], None, None]:
 @pytest.fixture
 def mqtt_client(
     mosquitto_broker: tuple[str, int],
-) -> Generator[tuple[mqtt.Client, list[tuple[str, Any]], threading.Event], None, None]:
+) -> Generator[tuple[mqtt.Client, list[tuple[str, Any]], threading.Event]]:
     host, port = mosquitto_broker
     received: list[tuple[str, Any]] = []
     ev: threading.Event = threading.Event()
@@ -138,44 +157,54 @@ def mqtt_client(
 @pytest.fixture
 def central_process(
     mosquitto_broker: tuple[str, int],
-) -> Generator[subprocess.Popen[bytes], None, None]:
+) -> Generator[subprocess.Popen[bytes]]:
     host, port = mosquitto_broker
     root: str = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     repo: str = os.path.join(root, "Commander_Repo")
     shared: str = os.path.join(root, "wfc_shared")
     db: str = os.path.join(tempfile.gettempdir(), f"e2e_cmd_{uuid.uuid4().hex[:8]}.db")
-    proc = _start_process(repo,
+    proc = _start_process(
+        repo,
         [sys.executable, "-m", "command_nodes.central.main"],
         {"WFC_DB_PATH": db, "DEBUG": "0", "PYTHONPATH": f"{repo};{shared}"},
-        host, port, "central-commander")
+        host,
+        port,
+        "central-commander",
+    )
     yield proc
     proc.terminate()
     try:
         proc.wait(5)
     except subprocess.TimeoutExpired:
         proc.kill()
-    try:
+    with contextlib.suppress(OSError):
         os.unlink(db)
-    except OSError:
-        pass
 
 
 @pytest.fixture
 def swarm_leader_process(
     mosquitto_broker: tuple[str, int],
-) -> Generator[tuple[subprocess.Popen[bytes], str], None, None]:
+) -> Generator[tuple[subprocess.Popen[bytes], str]]:
     host, port = mosquitto_broker
     root: str = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     repo: str = os.path.join(root, "Swarm_Repo")
     shared: str = os.path.join(root, "wfc_shared")
     node_id: str = f"sl-e2e-{uuid.uuid4().hex[:6]}"
-    proc = _start_process(repo,
+    proc = _start_process(
+        repo,
         [sys.executable, "main_leader.py"],
-        {"NODE_ID": node_id, "NODE_ZONE": "zone_alpha",
-         "NODE_LOCATION": "36.8065,10.1815", "DEBUG": "0",
-         "IS_BACKUP": "false",
-         "PYTHONPATH": f"{repo};{shared}"},
-        host, port, node_id)
+        {
+            "NODE_ID": node_id,
+            "NODE_ZONE": "zone_alpha",
+            "NODE_LOCATION": "36.8065,10.1815",
+            "DEBUG": "0",
+            "IS_BACKUP": "false",
+            "PYTHONPATH": f"{repo};{shared}",
+        },
+        host,
+        port,
+        node_id,
+    )
     yield proc, node_id
     proc.terminate()
     try:
@@ -186,22 +215,32 @@ def swarm_leader_process(
 
 @pytest.fixture
 def backup_leader_process(
-    mosquitto_broker: tuple[str, int], request: SubRequest,
-) -> Generator[tuple[subprocess.Popen[bytes], str], None, None]:
+    mosquitto_broker: tuple[str, int],
+    request: SubRequest,
+) -> Generator[tuple[subprocess.Popen[bytes], str]]:
     host, port = mosquitto_broker
     root: str = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     repo: str = os.path.join(root, "Swarm_Repo")
     shared: str = os.path.join(root, "wfc_shared")
     active_id: str = getattr(request, "param", "sl-e2e-active")
     node_id: str = f"sl-e2e-bu-{uuid.uuid4().hex[:4]}"
-    proc = _start_process(repo,
+    proc = _start_process(
+        repo,
         [sys.executable, "main_leader.py"],
-        {"NODE_ID": node_id, "NODE_ZONE": "zone_alpha",
-         "NODE_LOCATION": "36.8085,10.1835", "DEBUG": "0",
-         "IS_BACKUP": "true", "BACKUP_PEERS": active_id,
-         "LEADER_HEARTBEAT_TIMEOUT": "5",
-         "PYTHONPATH": f"{repo};{shared}"},
-        host, port, node_id)
+        {
+            "NODE_ID": node_id,
+            "NODE_ZONE": "zone_alpha",
+            "NODE_LOCATION": "36.8085,10.1835",
+            "DEBUG": "0",
+            "IS_BACKUP": "true",
+            "BACKUP_PEERS": active_id,
+            "LEADER_HEARTBEAT_TIMEOUT": "5",
+            "PYTHONPATH": f"{repo};{shared}",
+        },
+        host,
+        port,
+        node_id,
+    )
     yield proc, node_id
     proc.terminate()
     try:
@@ -213,19 +252,28 @@ def backup_leader_process(
 @pytest.fixture
 def scout_drone_process(
     mosquitto_broker: tuple[str, int],
-) -> Generator[tuple[subprocess.Popen[bytes], str], None, None]:
+) -> Generator[tuple[subprocess.Popen[bytes], str]]:
     host, port = mosquitto_broker
     root: str = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     repo: str = os.path.join(root, "Swarm_Repo")
     shared: str = os.path.join(root, "wfc_shared")
     node_id: str = f"sd-e2e-{uuid.uuid4().hex[:6]}"
     leader_id: str = "unknown"
-    proc = _start_process(repo,
+    proc = _start_process(
+        repo,
         [sys.executable, "main_scout.py"],
-        {"NODE_ID": node_id, "NODE_ZONE": "zone_alpha",
-         "NODE_LOCATION": "36.8070,10.1825", "LEADER_ID": leader_id,
-         "DEBUG": "0", "PYTHONPATH": f"{repo};{shared}"},
-        host, port, node_id)
+        {
+            "NODE_ID": node_id,
+            "NODE_ZONE": "zone_alpha",
+            "NODE_LOCATION": "36.8070,10.1825",
+            "LEADER_ID": leader_id,
+            "DEBUG": "0",
+            "PYTHONPATH": f"{repo};{shared}",
+        },
+        host,
+        port,
+        node_id,
+    )
     yield proc, node_id
     proc.terminate()
     try:
@@ -237,19 +285,25 @@ def scout_drone_process(
 @pytest.fixture
 def dashboard_process(
     mosquitto_broker: tuple[str, int],
-) -> Generator[tuple[subprocess.Popen[bytes], int], None, None]:
+) -> Generator[tuple[subprocess.Popen[bytes], int]]:
     host, port = mosquitto_broker
     root: str = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     repo: str = os.path.join(root, "Dashboard_Repo")
     shared: str = os.path.join(root, "wfc_shared")
     dash_port: int = _free_port()
     map_port: int = _free_port()
-    env: dict[str, str] = {**os.environ, "MQTT_HOST": host, "MQTT_PORT": str(port),
-                           "DASHBOARD_PORT": str(dash_port), "MAP_PORT": str(map_port),
-                           "DEBUG": "0", "PYTHONPATH": f"{repo};{shared}"}
-    proc = subprocess.Popen([sys.executable, "main.py"],
-                            cwd=repo, env=env,
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    env: dict[str, str] = {
+        **os.environ,
+        "MQTT_HOST": host,
+        "MQTT_PORT": str(port),
+        "DASHBOARD_PORT": str(dash_port),
+        "MAP_PORT": str(map_port),
+        "DEBUG": "0",
+        "PYTHONPATH": f"{repo};{shared}",
+    }
+    proc = subprocess.Popen(
+        [sys.executable, "main.py"], cwd=repo, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
     try:
         _wait_http("127.0.0.1", dash_port)
     except Exception:

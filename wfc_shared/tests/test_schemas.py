@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import time
-import pytest
 
-from wfc_shared.schemas.commands import Command
+import pytest
+from pydantic import ValidationError
+
 from wfc_shared.schemas.announcements import NodeAnnouncement
-from wfc_shared.schemas.events import FireEvent, FirePayload
-from wfc_shared.schemas.telemetry import DroneTelemetry, SwarmStatusSnapshot, FireIntensityUpdate
-from wfc_shared.schemas.pending import PendingCommand
+from wfc_shared.schemas.commands import Command
 from wfc_shared.schemas.domain_event import DomainEvent
+from wfc_shared.schemas.events import FireEvent, FirePayload
+from wfc_shared.schemas.pending import PendingCommand
+from wfc_shared.schemas.telemetry import DroneTelemetry, FireIntensityUpdate, SwarmStatusSnapshot
 
 
 class TestCommand:
@@ -19,7 +21,7 @@ class TestCommand:
         assert cmd.target_node == "sl-1"
         assert cmd.command_type == "RESPOND_TO_FIRE"
         assert cmd.command_id  # auto-generated
-        assert cmd.trace_id    # auto-generated
+        assert cmd.trace_id  # auto-generated
         assert cmd.timestamp > 0
 
     def test_command_with_payload(self) -> None:
@@ -31,8 +33,8 @@ class TestCommand:
         assert cmd.payload["task"] == "SCOUTING"
 
     def test_command_rejects_invalid_type(self) -> None:
-        with pytest.raises(Exception):
-            Command(target_node="sl-1", command_type="INVALID")
+        with pytest.raises(ValidationError):
+            Command(target_node="sl-1", command_type="INVALID")  # type: ignore[arg-type]
 
 
 class TestNodeAnnouncement:
@@ -66,7 +68,7 @@ class TestFirePayload:
         assert fp.location_coords is None
 
     def test_location_to_zone_compat(self) -> None:
-        fp = FirePayload(fire_id="f1", severity="HIGH", sensor_id="s1", location="zone_bravo")
+        fp = FirePayload(fire_id="f1", severity="HIGH", sensor_id="s1", location="zone_bravo")  # pyright: ignore[reportCallIssue] (back-compat: location is copied to zone by validator)
         assert fp.zone == "zone_bravo"
 
 

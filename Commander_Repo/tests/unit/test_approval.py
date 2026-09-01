@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
-import pytest  # pyright: ignore[reportUnusedImport]
 import time
 from unittest.mock import MagicMock
+
 from wfc_shared.schemas.commands import Command
 from wfc_shared.schemas.pending import PendingCommand
+
 
 class TestPendingCommandStore:
     def test_add_sets_future_expires_at(self) -> None:
         from core.approval.pending_store import PendingCommandStore
+
         mock_dispatcher = MagicMock()
         mock_mqtt = MagicMock()
         store = PendingCommandStore(mock_dispatcher, mock_mqtt, "node-1", ttl=30.0)
@@ -25,6 +27,7 @@ class TestPendingCommandStore:
 
     def test_expire_stale_only_expires_pending(self) -> None:
         from core.approval.pending_store import PendingCommandStore
+
         mock_dispatcher = MagicMock()
         mock_mqtt = MagicMock()
         store = PendingCommandStore(mock_dispatcher, mock_mqtt, "node-1", ttl=1.0)
@@ -36,8 +39,9 @@ class TestPendingCommandStore:
         expired = PendingCommand(command=cmd, created_at=time.time() - 100, expires_at=time.time() - 1)
         store._store["expired-pending"] = expired  # pyright: ignore[reportPrivateUsage]
         # Already approved
-        approved = PendingCommand(command=cmd, created_at=time.time() - 100,
-                                  expires_at=time.time() - 1, status="APPROVED")
+        approved = PendingCommand(
+            command=cmd, created_at=time.time() - 100, expires_at=time.time() - 1, status="APPROVED"
+        )
         store._store["approved-pending"] = approved  # pyright: ignore[reportPrivateUsage]
 
         result = store.expire_stale()
@@ -45,10 +49,12 @@ class TestPendingCommandStore:
         assert "fresh-pending" not in result
         assert "approved-pending" not in result
 
+
 class TestApprovalHandler:
     def test_routes_approved_correctly(self) -> None:
         from core.approval.approval_handler import ApprovalHandler
         from core.approval.pending_store import PendingCommandStore
+
         mock_dispatcher = MagicMock()
         mock_mqtt = MagicMock()
         store = PendingCommandStore(mock_dispatcher, mock_mqtt, "node-1")
@@ -63,6 +69,7 @@ class TestApprovalHandler:
     def test_routes_rejected_correctly(self) -> None:
         from core.approval.approval_handler import ApprovalHandler
         from core.approval.pending_store import PendingCommandStore
+
         mock_dispatcher = MagicMock()
         mock_mqtt = MagicMock()
         store = PendingCommandStore(mock_dispatcher, mock_mqtt, "node-1")
@@ -76,6 +83,7 @@ class TestApprovalHandler:
     def test_drops_unknown_decision(self) -> None:
         from core.approval.approval_handler import ApprovalHandler
         from core.approval.pending_store import PendingCommandStore
+
         mock_dispatcher = MagicMock()
         mock_mqtt = MagicMock()
         store = PendingCommandStore(mock_dispatcher, mock_mqtt, "node-1")
@@ -86,9 +94,11 @@ class TestApprovalHandler:
         handler.handle({"pending_id": "p3", "decision": "MAYBE"})
         mock_dispatcher.send.assert_not_called()
 
+
 class TestApprovalGate:
     def test_submit_routes_to_dispatcher_when_not_requiring_approval(self) -> None:
         from core.approval.approval_gate import ApprovalGate
+
         mock_dispatcher = MagicMock()
         mock_dispatcher.send.return_value = "trace-abc"
         mock_store = MagicMock()
@@ -101,10 +111,11 @@ class TestApprovalGate:
 
     def test_submit_routes_to_store_when_requiring_approval(self) -> None:
         from core.approval.approval_gate import ApprovalGate
+
         mock_dispatcher = MagicMock()
         mock_store = MagicMock()
         gate = ApprovalGate(mock_dispatcher, mock_store)
         cmd = Command(target_node="sl-1", command_type="ESCALATE_FIRE", payload={})
-        result = gate.submit(cmd, requires_approval=True)  # pyright: ignore[reportUnusedVariable]
+        gate.submit(cmd, requires_approval=True)  # pyright: ignore[reportUnusedVariable]
         mock_store.add.assert_called_once()
         mock_dispatcher.send.assert_not_called()

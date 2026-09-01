@@ -1,12 +1,13 @@
 # CI-DASH-001: MQTTBridge malformed payload doesn't crash
 from __future__ import annotations
 
-import pytest
 import json
 from typing import Any
 
-from dashboard.state import SwarmState
+import pytest
+
 from dashboard.mqtt_bridge import MQTTBridge
+from dashboard.state import SwarmState
 
 
 class MockMsg:
@@ -32,12 +33,17 @@ class TestMQTTBridge:
 
     def test_valid_payload_still_works_after_malformed(self, bridge: MQTTBridge, swarm_state: SwarmState) -> None:
         import time
+
         from wfc_shared.schemas.announcements import NodeAnnouncement
+
         # First register a node via announcement
         ann = NodeAnnouncement(
-            node_id="sd-1", node_type="SCOUT_DRONE",
-            capabilities=["SCOUT"], status="ONLINE",
-            host="10.0.0.2", announced_at=time.time(),
+            node_id="sd-1",
+            node_type="SCOUT_DRONE",
+            capabilities=["SCOUT"],
+            status="ONLINE",
+            host="10.0.0.2",
+            announced_at=time.time(),
         )
         # Apply directly
         swarm_state.apply_announcement(ann)

@@ -10,16 +10,16 @@ Design:
 """
 
 from __future__ import annotations
-from typing import Any
 
 import json
+from typing import Any
 
 from core.persistence.database import Database
 from core.state.mission_store import MissionRecord
 
-class MissionRepository:
 
-    def __init__(self, db: Database)  -> None:
+class MissionRepository:
+    def __init__(self, db: Database) -> None:
         self._db = db
 
     # region  WRITE
@@ -43,8 +43,12 @@ class MissionRepository:
                 history_json  = excluded.history_json
             """,
             (
-                rec.mission_id, rec.fire_id, rec.state, rec.assigned_node,
-                rec.created_at, rec.updated_at,
+                rec.mission_id,
+                rec.fire_id,
+                rec.state,
+                rec.assigned_node,
+                rec.created_at,
+                rec.updated_at,
                 json.dumps(rec.history),
             ),
         )
@@ -69,6 +73,7 @@ class MissionRepository:
         Returns the number of rows deleted.
         """
         import time
+
         cutoff = time.time() - max_age_seconds
         cur = self._db.execute(  # pyright: ignore[reportUnknownMemberType]
             """

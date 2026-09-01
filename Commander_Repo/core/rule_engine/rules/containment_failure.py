@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from core.rule_engine.rule import Rule, RuleResult
-from core.rule_engine.context import RuleContext
 from core.node_registry.registry import NodeRegistry
-from core.state.fire_state_store import FireRecord
-from wfc_shared.enums.fire_status import CONTAINED, ACTIVE
+from core.rule_engine.context import RuleContext
+from core.rule_engine.rule import Rule, RuleResult
 from core.rule_engine.trigger import EvalTrigger
+from core.state.fire_state_store import FireRecord
+from wfc_shared.enums.fire_status import ACTIVE, CONTAINED
+
 
 class ContainmentFailureRule(Rule):
     """
@@ -25,7 +26,7 @@ class ContainmentFailureRule(Rule):
             return RuleResult(
                 triggered=True,
                 reason="contained_fire_has_no_assigned_leader",
-                state_updates={"state": ACTIVE, "clear_assigned_nodes": True}
+                state_updates={"state": ACTIVE, "clear_assigned_nodes": True},
             )
 
         # Case 2: Any assigned leader is dead or not ACTIVE
@@ -35,17 +36,13 @@ class ContainmentFailureRule(Rule):
                 return RuleResult(
                     triggered=True,
                     reason=f"leader_{leader_id}_dead_on_contained_fire",
-                    state_updates={"state": ACTIVE, "clear_assigned_nodes": True}
+                    state_updates={"state": ACTIVE, "clear_assigned_nodes": True},
                 )
 
         # Optional: telemetry shows spread not slow
         if context.trigger == EvalTrigger.TELEMETRY_UPDATE:  # pyright: ignore[reportOptionalMemberAccess]
             for snap in context.swarm_snapshots.values():  # pyright: ignore[reportOptionalMemberAccess]
                 if snap.fire_id == fire.fire_id and snap.spread_rate not in (None, "SLOW"):
-                    return RuleResult(
-                        triggered=True,
-                        reason="contained_but_spreading",
-                        state_updates={"state": ACTIVE}
-                    )
+                    return RuleResult(triggered=True, reason="contained_but_spreading", state_updates={"state": ACTIVE})
 
         return RuleResult(triggered=False, reason="containment_holding")

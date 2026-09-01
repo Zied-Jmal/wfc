@@ -15,8 +15,8 @@ from typing import Any
 
 from core.persistence.database import Database
 
-class CommandRepository:
 
+class CommandRepository:
     """Persistence layer for CommandTracker records.
 
     Two tables: `commands` (one row per trace_id, snapshot of current
@@ -63,21 +63,20 @@ class CommandRepository:
         if row is None:
             return None
         history_rows = self._db.query(  # pyright: ignore[reportUnknownMemberType]
-            "SELECT event_type, payload_json, timestamp FROM command_history "
-            "WHERE trace_id = ? ORDER BY id ASC",
+            "SELECT event_type, payload_json, timestamp FROM command_history WHERE trace_id = ? ORDER BY id ASC",
             (trace_id,),
         )
         history = [
             {
-                "type":      h["event_type"],
-                "payload":   json.loads(h["payload_json"]),
+                "type": h["event_type"],
+                "payload": json.loads(h["payload_json"]),
                 "timestamp": h["timestamp"],
             }
             for h in history_rows
         ]
         return {
             "command": json.loads(row["command_json"]),
-            "status":  row["status"],
+            "status": row["status"],
             "history": history,
         }
 
@@ -92,22 +91,23 @@ class CommandRepository:
         for row in cmd_rows:
             result[row["trace_id"]] = {
                 "command": json.loads(row["command_json"]),
-                "status":  row["status"],
+                "status": row["status"],
                 "history": [],
             }
 
         # Single query for all history rows, then group in Python
         history_rows = self._db.query(  # pyright: ignore[reportUnknownMemberType]
-            "SELECT trace_id, event_type, payload_json, timestamp "
-            "FROM command_history ORDER BY id ASC"
+            "SELECT trace_id, event_type, payload_json, timestamp FROM command_history ORDER BY id ASC"
         )
         for h in history_rows:
             tid = h["trace_id"]
             if tid in result:
-                result[tid]["history"].append({
-                    "type":      h["event_type"],
-                    "payload":   json.loads(h["payload_json"]),
-                    "timestamp": h["timestamp"],
-                })
+                result[tid]["history"].append(
+                    {
+                        "type": h["event_type"],
+                        "payload": json.loads(h["payload_json"]),
+                        "timestamp": h["timestamp"],
+                    }
+                )
 
         return result

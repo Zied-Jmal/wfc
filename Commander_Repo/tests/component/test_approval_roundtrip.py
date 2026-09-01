@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import pytest  # pyright: ignore[reportUnusedImport]
 from unittest.mock import MagicMock
-from core.approval.approval_gate import ApprovalGate, DEFAULT_TTL  # pyright: ignore[reportUnusedImport]
-from core.approval.pending_store import PendingCommandStore
+
+from core.approval.approval_gate import ApprovalGate  # pyright: ignore[reportUnusedImport]
 from core.approval.approval_handler import ApprovalHandler
+from core.approval.pending_store import PendingCommandStore
 from wfc_shared.schemas.commands import Command
-from wfc_shared.schemas.pending import PendingCommand  # pyright: ignore[reportUnusedImport]
+
 
 class TestApprovalRoundTrip:
     def test_full_approve_round_trip(self) -> None:
@@ -37,10 +37,8 @@ class TestApprovalRoundTrip:
         fake_dispatcher.send.assert_called_once()
 
         # Verify MQTT had both PENDING and APPROVED publishes
-        pend_publishes = [c for c in fake_mqtt.publish.call_args_list
-                          if c[0][1].get("event") == "COMMAND_PENDING"]
-        approv_publishes = [c for c in fake_mqtt.publish.call_args_list
-                            if c[0][1].get("event") == "COMMAND_APPROVED"]
+        pend_publishes = [c for c in fake_mqtt.publish.call_args_list if c[0][1].get("event") == "COMMAND_PENDING"]
+        approv_publishes = [c for c in fake_mqtt.publish.call_args_list if c[0][1].get("event") == "COMMAND_APPROVED"]
         assert len(pend_publishes) >= 1
         assert len(approv_publishes) >= 1
 
@@ -62,6 +60,5 @@ class TestApprovalRoundTrip:
         fake_dispatcher.send.assert_not_called()
 
         # Should have REJECTED publish
-        rej_publishes = [c for c in fake_mqtt.publish.call_args_list
-                         if c[0][1].get("event") == "COMMAND_REJECTED"]
+        rej_publishes = [c for c in fake_mqtt.publish.call_args_list if c[0][1].get("event") == "COMMAND_REJECTED"]
         assert len(rej_publishes) >= 1

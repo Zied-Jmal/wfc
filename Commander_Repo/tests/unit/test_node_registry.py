@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-import pytest  # pyright: ignore[reportUnusedImport]
-import time  # pyright: ignore[reportUnusedImport]
-from wfc_shared.schemas.nodes import NodeRecord  # pyright: ignore[reportUnusedImport]
-from wfc_shared.enums.node_status import REGISTERED, ACTIVE, OFFLINE
 from wfc_shared.enums.capabilities import SWARM_LEAD
+from wfc_shared.enums.node_status import ACTIVE, OFFLINE, REGISTERED
+
 
 class TestNodeRegistry:
     def test_register_defaults_to_registered(self) -> None:
         from core.node_registry.registry import NodeRegistry
+
         reg = NodeRegistry()
         reg.register("sl-1", "SWARM_LEADER", [SWARM_LEAD])
         rec = reg.get("sl-1")
@@ -19,12 +18,14 @@ class TestNodeRegistry:
 
     def test_heartbeat_from_unregistered_is_ignored(self) -> None:
         from core.node_registry.registry import NodeRegistry
+
         reg = NodeRegistry()
         reg.heartbeat("ghost-node")
-        assert reg.exists("ghost-node") == False
+        assert not reg.exists("ghost-node")
 
     def test_heartbeat_grants_active(self) -> None:
         from core.node_registry.registry import NodeRegistry
+
         reg = NodeRegistry()
         reg.register("sl-1", "SWARM_LEADER", [SWARM_LEAD])
         reg.heartbeat("sl-1")
@@ -33,6 +34,7 @@ class TestNodeRegistry:
 
     def test_only_mark_offline_sets_offline(self) -> None:
         from core.node_registry.registry import NodeRegistry
+
         reg = NodeRegistry()
         reg.register("sl-1", "SWARM_LEADER", [SWARM_LEAD])
         reg.heartbeat("sl-1")
@@ -51,6 +53,7 @@ class TestNodeRegistry:
 
     def test_register_clears_stale_job_when_recovering_from_offline(self) -> None:
         from core.node_registry.registry import NodeRegistry
+
         reg = NodeRegistry()
         reg.register("sl-1", "SWARM_LEADER", [SWARM_LEAD])
         reg.heartbeat("sl-1")
@@ -62,6 +65,7 @@ class TestNodeRegistry:
 
     def test_register_preserves_job_when_re_registering_active(self) -> None:
         from core.node_registry.registry import NodeRegistry
+
         reg = NodeRegistry()
         reg.register("sl-1", "SWARM_LEADER", [SWARM_LEAD])
         reg.heartbeat("sl-1")
@@ -72,6 +76,7 @@ class TestNodeRegistry:
 
     def test_get_available_excludes_busy_nodes(self) -> None:
         from core.node_registry.registry import NodeRegistry
+
         reg = NodeRegistry()
         reg.register("sl-1", "SWARM_LEADER", [SWARM_LEAD])
         reg.register("sl-2", "SWARM_LEADER", [SWARM_LEAD])
@@ -87,6 +92,7 @@ class TestNodeRegistry:
 
     def test_get_closest_respects_idle_only(self) -> None:
         from core.node_registry.registry import NodeRegistry
+
         reg = NodeRegistry()
         reg.register("sl-1", "SWARM_LEADER", [SWARM_LEAD], location=(0.01, 0.01))
         reg.register("sl-2", "SWARM_LEADER", [SWARM_LEAD], location=(1.0, 1.0))

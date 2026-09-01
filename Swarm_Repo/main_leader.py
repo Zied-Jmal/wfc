@@ -23,19 +23,19 @@ from types import FrameType
 
 from core.node.swarm_leader_node import SwarmLeaderNode
 from core.utils.config import (
-    get_node_id,
-    get_node_zone,
-    get_node_location,
     get_backup_peers,
     get_is_backup,
+    get_node_id,
+    get_node_location,
+    get_node_zone,
 )
 
 
 def main() -> None:
     """Entrypoint for SwarmLeaderNode - starts the leader (or backup leader) node."""
 
-    node_id  = get_node_id()
-    zone     = get_node_zone() or "zone_alpha"
+    node_id = get_node_id()
+    zone = get_node_zone() or "zone_alpha"
     # Leader uses (lat, lon) tuple for FieldNode.location - WGS-84
     location = get_node_location() or (36.8065, 10.1815)
 
@@ -53,7 +53,7 @@ def main() -> None:
         sys.exit(0)
 
     signal.signal(signal.SIGTERM, _shutdown)
-    signal.signal(signal.SIGINT,  _shutdown)
+    signal.signal(signal.SIGINT, _shutdown)
 
     node.start()
 
@@ -63,12 +63,13 @@ def main() -> None:
         f"  zone     : {zone}\n"
         f"  location : {location[0]:.5f}°N {location[1]:.5f}°E\n"
         f"  peers    : {get_backup_peers()}\n"
-        f"  broker   : {os.getenv('MQTT_HOST','localhost')}:{os.getenv('MQTT_PORT','1883')}",
+        f"  broker   : {os.getenv('MQTT_HOST', 'localhost')}:{os.getenv('MQTT_PORT', '1883')}",
         flush=True,
     )
 
     try:
         import time
+
         while True:
             time.sleep(1)
     except KeyboardInterrupt:

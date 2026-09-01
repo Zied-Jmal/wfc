@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 import time
+
 import pytest
 
-from wfc_shared.enums.fire_status import ACTIVE
-from wfc_shared.enums.command_types import REINFORCE_FIRE, ESCALATE_FIRE
-from wfc_shared.schemas.telemetry import SwarmStatusSnapshot
-from core.state.fire_state_store import FireRecord
 from core.node_registry.registry import NodeRegistry
 from core.rule_engine.context import RuleContext
-from core.rule_engine.trigger import EvalTrigger
 from core.rule_engine.rules.swarm_attrition import SwarmAttritionRule
+from core.rule_engine.trigger import EvalTrigger
+from core.state.fire_state_store import FireRecord
+from wfc_shared.enums.command_types import ESCALATE_FIRE, REINFORCE_FIRE
+from wfc_shared.enums.fire_status import ACTIVE
+from wfc_shared.schemas.telemetry import SwarmStatusSnapshot
 
 
 @pytest.fixture

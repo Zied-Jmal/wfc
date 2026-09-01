@@ -11,26 +11,24 @@ is required, or directly to CommandDispatcher
 from __future__ import annotations
 
 # Standard Library
-
 import time
 from typing import Final
 
-# Third-Party Libraries
-
-# Project Imports
-
-from wfc_shared.schemas.commands import Command
-from wfc_shared.schemas.pending import PendingCommand
 from core.approval.pending_store import PendingCommandStore
 from core.commands_monitor.command_dispatcher import CommandDispatcher
 from core.utils.logger import log
+
+# Third-Party Libraries
+# Project Imports
+from wfc_shared.schemas.commands import Command
+from wfc_shared.schemas.pending import PendingCommand
 
 DEFAULT_TTL: Final = 30.0
 
 # region  CLASS - ApprovalGate
 
-class ApprovalGate:
 
+class ApprovalGate:
     """Sits between RuleEngine and CommandDispatcher.
     submit(command, requires_approval=False) immediate dispatch
     submit(command, requires_approval=True) held in PendingCommandStore
@@ -40,7 +38,7 @@ class ApprovalGate:
 
     def __init__(self, dispatcher: CommandDispatcher, store: PendingCommandStore) -> None:
         self._dispatcher = dispatcher
-        self._store      = store
+        self._store = store
 
     # endregion
 
@@ -56,10 +54,11 @@ class ApprovalGate:
         """
         if not requires_approval:
             trace_id = self._dispatcher.send(command)
-            log("ApprovalGate",
-                f"direct dispatch cmd={command.command_type} "
-                f"target={command.target_node}",
-                channel="APPROVAL")
+            log(
+                "ApprovalGate",
+                f"direct dispatch cmd={command.command_type} target={command.target_node}",
+                channel="APPROVAL",
+            )
             return trace_id
 
         pending = PendingCommand(
@@ -67,12 +66,15 @@ class ApprovalGate:
             created_at=time.time(),
         )
         self._store.add(pending)
-        log("ApprovalGate",
+        log(
+            "ApprovalGate",
             f"held for approval cmd={command.command_type} "
             f"target={command.target_node} pending_id={pending.pending_id[:8]}",
-            channel="APPROVAL")
+            channel="APPROVAL",
+        )
         return pending.pending_id
 
     # endregion
+
 
 # endregion (end of class ApprovalGate)

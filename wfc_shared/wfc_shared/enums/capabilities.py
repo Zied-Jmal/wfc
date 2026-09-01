@@ -16,25 +16,26 @@ FIREFIGHTING_DRONE : [FIREFIGHTING, RECEIVE_COMMANDS, HEARTBEAT, TELEMETRY]
 OPERATOR_HMI       : [HUMAN_APPROVAL]
 
 """
+
 from __future__ import annotations
 
 from typing import Final
 
 # Commander capabilities
-DISPATCH_COMMANDS: Final[str] = "DISPATCH_COMMANDS"   # Can issue commands to field nodes
-HUMAN_APPROVAL: Final[str] = "HUMAN_APPROVAL"      # Can act as approval authority
-FIRE_DETECTION: Final[str] = "FIRE_DETECTION"      # Processes fire sensor events
+DISPATCH_COMMANDS: Final[str] = "DISPATCH_COMMANDS"  # Can issue commands to field nodes
+HUMAN_APPROVAL: Final[str] = "HUMAN_APPROVAL"  # Can act as approval authority
+FIRE_DETECTION: Final[str] = "FIRE_DETECTION"  # Processes fire sensor events
 
 # Leader capabilities
-SWARM_LEAD: Final[str] = "SWARM_LEAD"          # Leads a drone group; relay target
-LEADER_BACKUP: Final[str] = "LEADER_BACKUP"       # Can be promoted to lead on leader death
+SWARM_LEAD: Final[str] = "SWARM_LEAD"  # Leads a drone group; relay target
+LEADER_BACKUP: Final[str] = "LEADER_BACKUP"  # Can be promoted to lead on leader death
 
 # Drone capabilities (mutually exclusive - a drone is exactly one type)
-SCOUT: Final[str] = "SCOUT"               # Reconnaissance, detection, fire tracking
-FIREFIGHTING: Final[str] = "FIREFIGHTING"        # Water / retardant delivery
+SCOUT: Final[str] = "SCOUT"  # Reconnaissance, detection, fire tracking
+FIREFIGHTING: Final[str] = "FIREFIGHTING"  # Water / retardant delivery
 
 # Shared field capabilities
-AERIAL_RESPONSE: Final[str] = "AERIAL_RESPONSE"     # Generic aerial responder (legacy)
-RECEIVE_COMMANDS: Final[str] = "RECEIVE_COMMANDS"    # Accepts inbound Command payloads
-HEARTBEAT: Final[str] = "HEARTBEAT"           # Publishes periodic heartbeat
-TELEMETRY: Final[str] = "TELEMETRY"           # Publishes telemetry data
+AERIAL_RESPONSE: Final[str] = "AERIAL_RESPONSE"  # Generic aerial responder (legacy)
+RECEIVE_COMMANDS: Final[str] = "RECEIVE_COMMANDS"  # Accepts inbound Command payloads
+HEARTBEAT: Final[str] = "HEARTBEAT"  # Publishes periodic heartbeat
+TELEMETRY: Final[str] = "TELEMETRY"  # Publishes telemetry data

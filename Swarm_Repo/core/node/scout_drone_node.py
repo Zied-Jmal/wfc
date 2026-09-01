@@ -23,16 +23,15 @@ import threading
 import time
 from typing import Any
 
-from core.node.field_node import FieldNode
-from core.utils.logger import log
-
 # Physical engine (action layer V2)
 from action.gps import GPSCoord
-from action.wind import WindModel
+from action.resources import BATTERY_CAPACITY_WH, DroneResourceModel
 from action.scouting import ScoutActionEngine, ScoutState
-from action.resources import DroneResourceModel, BATTERY_CAPACITY_WH
+from action.wind import WindModel
 
-from wfc_shared.enums.capabilities import SCOUT, RECEIVE_COMMANDS, HEARTBEAT, TELEMETRY
+from core.node.field_node import FieldNode
+from core.utils.logger import log
+from wfc_shared.enums.capabilities import HEARTBEAT, RECEIVE_COMMANDS, SCOUT, TELEMETRY
 from wfc_shared.enums.command_types import DISPATCH_DRONE, RECALL_DRONE, UPDATE_TASK
 from wfc_shared.enums.node_types import SCOUT_DRONE
 from wfc_shared.enums.topics import telemetry_topic
@@ -58,11 +57,11 @@ class ScoutDroneNode(FieldNode):
 
     def __init__(
         self,
-        node_id:        str,
-        zone:           str,
-        home_gps:       GPSCoord,
-        leader_id:      str,
-        wind:           WindModel | None = None,
+        node_id: str,
+        zone: str,
+        home_gps: GPSCoord,
+        leader_id: str,
+        wind: WindModel | None = None,
         initial_battery_wh: float = BATTERY_CAPACITY_WH,
     ) -> None:
         super().__init__(
@@ -72,10 +71,10 @@ class ScoutDroneNode(FieldNode):
             zone=zone,
             location=[home_gps.lat_deg, home_gps.lon_deg],
         )
-        self._leader_id    = leader_id
-        self._home_gps     = home_gps
-        self._task         = "IDLE"
-        self._running      = False
+        self._leader_id = leader_id
+        self._home_gps = home_gps
+        self._task = "IDLE"
+        self._running = False
         self._telem_thread: threading.Thread | None = None
 
         # Wind model (shared with fire suppression drones in zone)
@@ -84,7 +83,7 @@ class ScoutDroneNode(FieldNode):
         # Resource model
         self._resources = DroneResourceModel(
             initial_battery_wh=initial_battery_wh,
-            initial_payload_l=0.0,           # scouts carry no liquid payload
+            initial_payload_l=0.0,  # scouts carry no liquid payload
             payload_type="water",
             base_station_dist_m=0.0,
         )
@@ -110,14 +109,14 @@ class ScoutDroneNode(FieldNode):
         """
         super().start()
         self._running = True
-        self._telem_thread = threading.Thread(
-            target=self._telemetry_loop, daemon=True, name=f"telem-{self.node_id}"
-        )
+        self._telem_thread = threading.Thread(target=self._telemetry_loop, daemon=True, name=f"telem-{self.node_id}")
         self._telem_thread.start()
-        log("ScoutDroneNode",
+        log(
+            "ScoutDroneNode",
             f"{self.node_id} started - home=({self._home_gps.lat_deg:.5f},"
             f"{self._home_gps.lon_deg:.5f}) leader={self._leader_id}",
-            channel="SYSTEM")
+            channel="SYSTEM",
+        )
 
     def stop(self) -> None:
         """Stop the scout drone and shut down movement engine."""
@@ -129,7 +128,7 @@ class ScoutDroneNode(FieldNode):
 
     def _on_registry_announce(self, payload: dict[str, Any]) -> None:
         node_id = payload.get("node_id", "")
-        caps    = payload.get("capabilities", [])
+        caps = payload.get("capabilities", [])
         if "SWARM_LEAD" in caps and node_id != self._leader_id:
             old = self._leader_id
             self._leader_id = node_id
@@ -150,9 +149,11 @@ class ScoutDroneNode(FieldNode):
                 )
                 self._task = "SCOUTING"
                 self._action.dispatch_to(fire_gps, severity=severity)
-                log("ScoutDroneNode",
+                log(
+                    "ScoutDroneNode",
                     f"DISPATCH SCOUTING fire=({target[0]:.5f},{target[1]:.5f}) sev={severity}",
-                    channel="COMMANDS")
+                    channel="COMMANDS",
+                )
         elif command_type == RECALL_DRONE:
             self._task = "RETURNING"
             self._action.recall()
@@ -175,13 +176,11 @@ class ScoutDroneNode(FieldNode):
 
     def _telemetry_loop(self) -> None:
         """Background telemetry publish loop (every 2s)."""
-        DT = 2.0   # s
+        DT = 2.0  # s
         while self._running:
             time.sleep(DT)
             try:
-                is_moving = self._action.state in (
-                    ScoutState.TRANSITING, ScoutState.GRID_SWEEP
-                )
+                is_moving = self._action.state in (ScoutState.TRANSITING, ScoutState.GRID_SWEEP)
 
                 # Tick physical engine (movement + sensors)
                 self._action.tick(dt=DT)
@@ -197,11 +196,11 @@ class ScoutDroneNode(FieldNode):
 
                 # Sync task label with engine state
                 state_map = {
-                    ScoutState.IDLE:       "IDLE",
+                    ScoutState.IDLE: "IDLE",
                     ScoutState.TRANSITING: "SCOUTING",
-                    ScoutState.ORBITING:   "SCOUTING",
+                    ScoutState.ORBITING: "SCOUTING",
                     ScoutState.GRID_SWEEP: "SCOUTING",
-                    ScoutState.RETURNING:  "RETURNING",
+                    ScoutState.RETURNING: "RETURNING",
                 }
                 self._task = state_map.get(self._action.state, self._task)
 
@@ -209,9 +208,11 @@ class ScoutDroneNode(FieldNode):
                 if self._resources.should_return_to_base and self._task != "RETURNING":
                     self._task = "RETURNING"
                     self._action.recall()
-                    log("ScoutDroneNode",
+                    log(
+                        "ScoutDroneNode",
                         f"{self.node_id} LOW BATTERY ({self._resources.battery_wh:.1f} Wh) → RTB",
-                        channel="SYSTEM")
+                        channel="SYSTEM",
+                    )
 
                 telem = self._build_telemetry()
                 self.mqtt.publish(
@@ -226,53 +227,53 @@ class ScoutDroneNode(FieldNode):
 
     def _build_telemetry(self) -> DroneTelemetry:
         """Build a DroneTelemetry payload from current sensor and resource state."""
-        pos  = self._action.position_gps          # WGS-84, noisy
-        sr   = self._action.last_sensor_readings  # physics-based readings
+        pos = self._action.position_gps  # WGS-84, noisy
+        sr = self._action.last_sensor_readings  # physics-based readings
 
         # Connectivity from RSSI model
-        dist_to_gcs = self._action.position_gps_true \
-            and _haversine_approx_m(
-                self._home_gps.lat_deg, self._home_gps.lon_deg,
-                pos.lat_deg, pos.lon_deg,
-            )
+        dist_to_gcs = self._action.position_gps_true and _haversine_approx_m(
+            self._home_gps.lat_deg,
+            self._home_gps.lon_deg,
+            pos.lat_deg,
+            pos.lon_deg,
+        )
         conn = self._resources.connectivity(dist_to_gcs)
 
         return DroneTelemetry(
             drone_id=self.node_id,
             leader_id=self._leader_id,
-            timestamp=time.time(),                      # UNIX epoch (s)
-
+            timestamp=time.time(),  # UNIX epoch (s)
             # ISO position
-            position=(pos.lat_deg, pos.lon_deg),        # WGS-84 decimal degrees
+            position=(pos.lat_deg, pos.lon_deg),  # WGS-84 decimal degrees
             altitude_m_amsl=self._action.altitude_m_amsl,  # m AMSL
-
             # ISO resource values
-            battery_wh=self._resources.battery_wh,     # Wh remaining
-            battery_pct=self._resources.battery_pct,   # 0.0-1.0
-            payload_litres=0.0,                         # L  (scouts carry no payload)
-            payload_kg=0.0,                             # kg
+            battery_wh=self._resources.battery_wh,  # Wh remaining
+            battery_pct=self._resources.battery_pct,  # 0.0-1.0
+            payload_litres=0.0,  # L  (scouts carry no payload)
+            payload_kg=0.0,  # kg
             task=self._task,  # pyright: ignore[reportArgumentType]
             connectivity=conn,  # pyright: ignore[reportArgumentType]
-
             # ISO sensor values (all physics-based)
-            thermal_peak_temp_c=sr.get("thermal_peak_temp_c"),      # °C
-            thermal_coverage_pct=sr.get("thermal_coverage_pct"),    # 0.0-1.0
-            smoke_density_mg_m3=sr.get("smoke_density_mg_m3"),      # mg/m³
+            thermal_peak_temp_c=sr.get("thermal_peak_temp_c"),  # °C
+            thermal_coverage_pct=sr.get("thermal_coverage_pct"),  # 0.0-1.0
+            smoke_density_mg_m3=sr.get("smoke_density_mg_m3"),  # mg/m³
             smoke_optical_density=sr.get("smoke_optical_density"),  # 0.0-1.0
-            flame_height_m=sr.get("flame_height_m"),                # m
-            distance_to_flame_m=sr.get("distance_to_flame_m"),      # m
-            wind_speed_mps=sr.get("wind_speed_mps"),                # m/s
-            wind_direction_deg=sr.get("wind_direction_deg"),        # °T
-            perimeter_estimate_m=sr.get("perimeter_estimate_m"),    # m
+            flame_height_m=sr.get("flame_height_m"),  # m
+            distance_to_flame_m=sr.get("distance_to_flame_m"),  # m
+            wind_speed_mps=sr.get("wind_speed_mps"),  # m/s
+            wind_direction_deg=sr.get("wind_direction_deg"),  # °T
+            perimeter_estimate_m=sr.get("perimeter_estimate_m"),  # m
         )
 
 
 def _haversine_approx_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Fast approximate Haversine for short distances."""
     import math
-    R  = 6_371_000.0
-    p1 = math.radians(lat1); p2 = math.radians(lat2)
+
+    R = 6_371_000.0
+    p1 = math.radians(lat1)
+    p2 = math.radians(lat2)
     dp = p2 - p1
     dl = math.radians(lon2 - lon1)
-    a  = math.sin(dp/2)**2 + math.cos(p1)*math.cos(p2)*math.sin(dl/2)**2
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
     return 2 * R * math.asin(math.sqrt(a))

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from core.rule_engine.rule import Rule, RuleResult
-from core.rule_engine.context import RuleContext
+from typing import ClassVar
+
 from core.node_registry.registry import NodeRegistry
-from core.state.fire_state_store import FireRecord
-from wfc_shared.schemas.commands import Command
-from wfc_shared.enums.command_types import STAND_DOWN, RESPOND_TO_FIRE
+from core.rule_engine.context import RuleContext
+from core.rule_engine.rule import Rule, RuleResult
 from core.rule_engine.trigger import EvalTrigger
+from core.state.fire_state_store import FireRecord
+from wfc_shared.enums.command_types import RESPOND_TO_FIRE, STAND_DOWN
+from wfc_shared.schemas.commands import Command
+
 
 class PriorityRule(Rule):
     """
@@ -24,14 +27,14 @@ class PriorityRule(Rule):
     def name(self) -> str:
         return "priority"
 
-    _priority_map = {
+    _priority_map: ClassVar[dict[str, int]] = {
         "CRITICAL": 100,
         "HIGH": 90,
         "SPREADING": 85,
         "MEDIUM": 70,
         "ACTIVE": 60,
         "LOW": 30,
-        "CONTAINED": 10
+        "CONTAINED": 10,
     }
 
     def evaluate(self, fire: FireRecord, registry: NodeRegistry, context: RuleContext | None = None) -> RuleResult:
@@ -40,15 +43,14 @@ class PriorityRule(Rule):
 
         # No available leaders?
         available = [
-            n for n in registry.get_all().values()
-            if "SWARM_LEAD" in n.capabilities
-            and n.status == "ACTIVE"
-            and n.current_job is None
+            n
+            for n in registry.get_all().values()
+            if "SWARM_LEAD" in n.capabilities and n.status == "ACTIVE" and n.current_job is None
         ]
         if available:
             return RuleResult(triggered=False, reason="leaders_available")
 
-# Already assigned skip
+        # Already assigned skip
         if fire.assigned_nodes:
             return RuleResult(triggered=False, reason="fire_already_assigned")
 
@@ -76,8 +78,10 @@ class PriorityRule(Rule):
                 Command(
                     target_node=stolen_leader,
                     command_type=STAND_DOWN,  # pyright: ignore[reportArgumentType]
-                    payload={"fire_id": lowest_fire.fire_id,
-                             "reason": f"preempted_for_higher_priority_fire_{fire.fire_id}"}
+                    payload={
+                        "fire_id": lowest_fire.fire_id,
+                        "reason": f"preempted_for_higher_priority_fire_{fire.fire_id}",
+                    },
                 ),
                 Command(
                     target_node=stolen_leader,
@@ -90,11 +94,11 @@ class PriorityRule(Rule):
                         "severity": fire.severity,
                         "sensor_id": fire.sensor_id,
                         "preempted_from": lowest_fire.fire_id,
-                    }
+                    },
                 ),
             ],
             state_updates={
                 "preempt_from_fire_id": lowest_fire.fire_id,
                 "preempt_node_id": stolen_leader,
-            }
+            },
         )

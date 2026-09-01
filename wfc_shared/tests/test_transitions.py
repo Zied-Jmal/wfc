@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 from wfc_shared.enums.fire_status import (
+    ACTIVE,
+    CONTAINED,
+    EXTINGUISHED,
     FIRE_TRANSITIONS,
+    IGNITED,
+    SPREADING,
+    SUPPRESSED,
     TERMINAL_FIRE_STATES,
-    IGNITED, ACTIVE, SPREADING, CONTAINED, SUPPRESSED, EXTINGUISHED,
 )
 
 

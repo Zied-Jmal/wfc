@@ -14,18 +14,18 @@ the perimeter until SUPPRESSED is declared.
 
 from __future__ import annotations
 
-from wfc_shared.enums.fire_status import CONTAINED
-from wfc_shared.enums.command_types import CONTAIN_FIRE
-from wfc_shared.schemas.commands import Command
-from core.state.fire_state_store import FireRecord
 from core.node_registry.registry import NodeRegistry
-from core.rule_engine.rule import Rule, RuleResult
 from core.rule_engine.context import RuleContext
+from core.rule_engine.rule import Rule, RuleResult
+from core.state.fire_state_store import FireRecord
+from wfc_shared.enums.command_types import CONTAIN_FIRE
+from wfc_shared.enums.fire_status import CONTAINED
+from wfc_shared.schemas.commands import Command
 
 # region  CLASS - FireContainedRule
 
-class FireContainedRule(Rule):
 
+class FireContainedRule(Rule):
     """
     Triggers on FIRE_CONTAINED. Sends CONTAIN_FIRE to the single swarm
     leader assigned to this fire (fire.assigned_node) - hold the
@@ -68,16 +68,17 @@ class FireContainedRule(Rule):
                     target_node=target,
                     command_type=CONTAIN_FIRE,  # pyright: ignore[reportArgumentType]
                     payload={
-                        "fire_id":         fire.fire_id,
-                        "zone":            fire.zone,
-                        "location":        fire.zone,
+                        "fire_id": fire.fire_id,
+                        "zone": fire.zone,
+                        "location": fire.zone,
                         "location_coords": fire.location_coords,
-                        "reason":          "fire_contained",
+                        "reason": "fire_contained",
                     },
                 )
             ],
         )
 
     # endregion
+
 
 # endregion (end of class FireContainedRule)

@@ -23,14 +23,18 @@ import threading
 import time
 from typing import Any, Final
 
+from command_nodes.core_commander.commander_core import CommanderCore
 from core.node.base_node import BaseNode
 from core.persistence.repositories.alert_repo import AlertRepository
-from command_nodes.core_commander.commander_core import CommanderCore
-from wfc_shared.enums.capabilities import DISPATCH_COMMANDS, HEARTBEAT, SWARM_LEAD  # pyright: ignore[reportUnusedImport]
+from core.utils.config import get_node_location, get_node_zone
+from core.utils.logger import log
+from wfc_shared.enums.capabilities import (  # pyright: ignore[reportUnusedImport]
+    DISPATCH_COMMANDS,
+    HEARTBEAT,
+    SWARM_LEAD,
+)
 from wfc_shared.enums.mission_status import PAUSED
 from wfc_shared.enums.topics import SYSTEM_FAILOVER
-from core.utils.logger import log
-from core.utils.config import get_node_zone, get_node_location
 
 PRIMARY_NODE_TYPE: Final = "CENTRAL_COMMANDER"
 
@@ -44,8 +48,8 @@ LEASE_CONFIRM_MAX_WAIT_SECONDS: Final = 10.0
 
 # region  CLASS - BackupCommander
 
-class BackupCommander(BaseNode):
 
+class BackupCommander(BaseNode):
     """
     Standby failover node.
 
@@ -60,12 +64,12 @@ class BackupCommander(BaseNode):
         super().__init__(
             node_id="backup-commander",
             node_type="BACKUP_COMMANDER",
-            capabilities=["FAILOVER", DISPATCH_COMMANDS, HEARTBEAT],
+            capabilities=[DISPATCH_COMMANDS, HEARTBEAT],
             zone=get_node_zone(),
             location=get_node_location(),
         )
         self._primary_alive = True
-# alerts for node-down events (mirrors CentralNode._node_alerts)
+        # alerts for node-down events (mirrors CentralNode._node_alerts)
         self._node_alerts: AlertRepository | None = None
 
     # endregion
@@ -78,7 +82,7 @@ class BackupCommander(BaseNode):
             1. BaseNode.start() - MQTT, heartbeat, registry, _node_alerts
             2. CommanderCore.start(active=False) - standby, mirrors state
         """
-# Core starts in standby - no rules fire, but state is mirrored
+        # Core starts in standby - no rules fire, but state is mirrored
 
         self._core = CommanderCore(
             node_id=self.node_id,
@@ -90,9 +94,11 @@ class BackupCommander(BaseNode):
 
         self._core.start(active=False)
 
-        log("BackupCommander",
+        log(
+            "BackupCommander",
             "ready - standby mode (CommanderCore pre-warmed, watching for primary failure)",
-            channel="SYSTEM")
+            channel="SYSTEM",
+        )
 
     def stop(self) -> None:
         log("BackupCommander", "stopping", channel="SYSTEM")
@@ -124,14 +130,12 @@ class BackupCommander(BaseNode):
         while confirming lease staleness. Dispatched onto its own thread
         so the monitor loop is never held up by our confirmation wait.
         """
-        node_id    = payload.get("node_id", "")
-        rec        = self.registry.get(node_id)
+        node_id = payload.get("node_id", "")
+        rec = self.registry.get(node_id)
         is_primary = rec is not None and rec.node_type == PRIMARY_NODE_TYPE
 
         if is_primary:
-            log("BackupCommander",
-                f"primary failure detected ({node_id}) - taking over",
-                channel="SYSTEM")
+            log("BackupCommander", f"primary failure detected ({node_id}) - taking over", channel="SYSTEM")
             self._primary_alive = False
             self._announce_node_status(node_id, "OFFLINE")
 
@@ -148,26 +152,25 @@ class BackupCommander(BaseNode):
             threading.Thread(target=self._become_active, daemon=True).start()
             return
 
-# Not the primary - but if active and this is a swarm leader, re-dispatch
+        # Not the primary - but if active and this is a swarm leader, re-dispatch
         if self._core._active and rec and rec.current_job and SWARM_LEAD in (rec.capabilities or []):  # pyright: ignore[reportPrivateUsage, reportOptionalMemberAccess]
             fire_id = rec.current_job  # pyright: ignore[reportOptionalMemberAccess]
-            log("BackupCommander",
+            log(
+                "BackupCommander",
                 f"swarm leader {node_id} offline while backup is active - re-dispatching fire={fire_id[:8]}",  # pyright: ignore[reportOptionalSubscript]
-                channel="SYSTEM")
+                channel="SYSTEM",
+            )
             self.registry.release_job(node_id)
 
             mission = self._core.missions.get_for_fire(fire_id)  # pyright: ignore[reportArgumentType]
             if mission:
-                self._core.missions.transition(
-                    mission.mission_id, PAUSED,
-                    reason=f"leader_{node_id}_offline"
-                )
+                self._core.missions.transition(mission.mission_id, PAUSED, reason=f"leader_{node_id}_offline")
             self._core.redispatch_fire(fire_id, dead_leader=node_id)  # pyright: ignore[reportArgumentType]
 
     def _on_node_recovered(self, payload: dict[str, Any]) -> None:
         """HeartbeatMonitor calls this when a node comes back ONLINE."""
-        node_id    = payload.get("node_id", "")
-        rec        = self.registry.get(node_id)
+        node_id = payload.get("node_id", "")
+        rec = self.registry.get(node_id)
         is_primary = rec is not None and rec.node_type == PRIMARY_NODE_TYPE
 
         if not is_primary:
@@ -206,10 +209,11 @@ class BackupCommander(BaseNode):
         waited = 0.0
         while not self._core._check_lease_and_maybe_promote():  # pyright: ignore[reportPrivateUsage]
             if waited >= LEASE_CONFIRM_MAX_WAIT_SECONDS:
-                log("BackupCommander",
-                    "lease still not confirmed stale after max wait - "
-                    "promoting anyway on heartbeat timeout alone",
-                    channel="SYSTEM")
+                log(
+                    "BackupCommander",
+                    "lease still not confirmed stale after max wait - promoting anyway on heartbeat timeout alone",
+                    channel="SYSTEM",
+                )
                 break
             time.sleep(LEASE_CONFIRM_POLL_SECONDS)
             waited += LEASE_CONFIRM_POLL_SECONDS
@@ -218,25 +222,28 @@ class BackupCommander(BaseNode):
             # _on_node_recovered() and clear self._primary_alive - bail
             # out of this promotion attempt rather than racing it.
             if self._primary_alive:
-                log("BackupCommander",
-                    "primary recovered while confirming lease staleness - "
-                    "aborting promotion",
-                    channel="SYSTEM")
+                log(
+                    "BackupCommander",
+                    "primary recovered while confirming lease staleness - aborting promotion",
+                    channel="SYSTEM",
+                )
                 return
 
         self._core.activate()
 
-        log("BackupCommander",
-            "PRIMARY LOST - FAILOVER MODE: CommanderCore is now active",
-            channel="SYSTEM")
+        log("BackupCommander", "PRIMARY LOST - FAILOVER MODE: CommanderCore is now active", channel="SYSTEM")
 
         # qos=1 - this tells the rest of the system who the
         # new primary is; losing it silently leaves field nodes and
         # the dashboard unaware a failover happened at all.
-        self.mqtt.publish(SYSTEM_FAILOVER, {
-            "new_primary": self.node_id,
-            "timestamp":   time.time(),
-        }, qos=1)
+        self.mqtt.publish(
+            SYSTEM_FAILOVER,
+            {
+                "new_primary": self.node_id,
+                "timestamp": time.time(),
+            },
+            qos=1,
+        )
 
     def _stand_down(self, primary_node_id: str) -> None:
         """
@@ -246,9 +253,11 @@ class BackupCommander(BaseNode):
         snapshots but continues mirroring state from the primary's snapshots.
         """
         self._core.deactivate()
-        log("BackupCommander",
+        log(
+            "BackupCommander",
             f"primary recovered ({primary_node_id}) - standing down, returning to standby",
-            channel="SYSTEM")
+            channel="SYSTEM",
+        )
 
     @property
     def is_active(self) -> bool:
@@ -256,5 +265,6 @@ class BackupCommander(BaseNode):
         return self._core._active  # pyright: ignore[reportPrivateUsage]
 
     # endregion
+
 
 # endregion (end of class BackupCommander)

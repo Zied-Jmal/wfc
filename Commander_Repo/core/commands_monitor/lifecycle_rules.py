@@ -16,19 +16,19 @@ Command lifecycle state machine constants
 from __future__ import annotations
 
 VALID_TRANSITIONS: dict[str, set[str]] = {
-    "ISSUED":   {"RECEIVED"},
+    "ISSUED": {"RECEIVED"},
     "RECEIVED": {"EXECUTED", "FAILED"},
-    "EXECUTED": set(),   # terminal
-    "FAILED":   set(),   # terminal
+    "EXECUTED": set(),  # terminal
+    "FAILED": set(),  # terminal
 }
 
 TERMINAL_STATES: set[str] = {"EXECUTED", "FAILED"}
 
 EVENT_TO_STATE: dict[str, str] = {
-    "COMMAND_ISSUED":   "ISSUED",
+    "COMMAND_ISSUED": "ISSUED",
     "COMMAND_RECEIVED": "RECEIVED",
     "COMMAND_EXECUTED": "EXECUTED",
-    "COMMAND_FAILED":   "FAILED",
+    "COMMAND_FAILED": "FAILED",
 }
 
 # Short status string (as used in ACK payloads, logs, dashboard)
@@ -36,7 +36,7 @@ EVENT_TO_STATE: dict[str, str] = {
 STATUS_TO_EVENT_TYPE: dict[str, str] = {
     "RECEIVED": "COMMAND_RECEIVED",
     "EXECUTED": "COMMAND_EXECUTED",
-    "FAILED":   "COMMAND_FAILED",
+    "FAILED": "COMMAND_FAILED",
 }
 
 # endregion

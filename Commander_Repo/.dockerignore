@@ -12,3 +12,4 @@ docs/
 *.md
 .vscode/
 .idea/
+data/

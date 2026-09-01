@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import threading
 import time
+
 from wfc_shared.schemas.telemetry import SwarmStatusSnapshot
+
 
 class SwarmStatusStore:
     """In-memory store of the most recent SwarmStatusSnapshot per leader."""
@@ -15,7 +17,7 @@ class SwarmStatusStore:
         with self._lock:
             self._snapshots[snapshot.leader_id] = snapshot
 
-    def get(self, leader_id: str) -> (SwarmStatusSnapshot | None):
+    def get(self, leader_id: str) -> SwarmStatusSnapshot | None:
         with self._lock:
             return self._snapshots.get(leader_id)
 

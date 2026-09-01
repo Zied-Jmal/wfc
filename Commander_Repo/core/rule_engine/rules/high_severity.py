@@ -7,20 +7,18 @@ HighSeverityRule - escalate HIGH severity fires
 
 from __future__ import annotations
 
-# Standard Library
-
-# Third-Party Libraries
-
-# Project Imports
-
-from wfc_shared.enums.fire_status import ACTIVE, IGNITED
+from core.node_registry.registry import NodeRegistry
+from core.rule_engine.context import RuleContext
+from core.rule_engine.rule import Rule, RuleResult
+from core.state.fire_state_store import FireRecord
 from wfc_shared.enums.capabilities import DISPATCH_COMMANDS
 from wfc_shared.enums.command_types import ESCALATE_FIRE
+
+# Standard Library
+# Third-Party Libraries
+# Project Imports
+from wfc_shared.enums.fire_status import ACTIVE, IGNITED
 from wfc_shared.schemas.commands import Command
-from core.state.fire_state_store import FireRecord
-from core.node_registry.registry import NodeRegistry
-from core.rule_engine.rule import Rule, RuleResult
-from core.rule_engine.context import RuleContext
 
 # Any non-terminal, non-contained/suppressed state still warrants escalation
 # review if severity is HIGH - covers a HIGH fire the instant it's known,
@@ -29,8 +27,8 @@ _ESCALATABLE_STATES = {IGNITED, ACTIVE}
 
 # region  CLASS - HighSeverityRule
 
-class HighSeverityRule(Rule):
 
+class HighSeverityRule(Rule):
     """
     Triggers when a fire's CURRENT severity is HIGH and it's still in an
     active/escalatable state. Sends ESCALATE_FIRE to all DISPATCH_COMMANDS
@@ -72,9 +70,9 @@ class HighSeverityRule(Rule):
                     target_node=node,
                     command_type=ESCALATE_FIRE,  # pyright: ignore[reportArgumentType]
                     payload={
-                        "fire_id":  fire.fire_id,
-                        "zone":     fire.zone,
-                        "location": fire.zone,   # back-compat alias
+                        "fire_id": fire.fire_id,
+                        "zone": fire.zone,
+                        "location": fire.zone,  # back-compat alias
                         "severity": fire.severity,
                     },
                 )
@@ -83,5 +81,6 @@ class HighSeverityRule(Rule):
         )
 
     # endregion
+
 
 # endregion (end of class HighSeverityRule)

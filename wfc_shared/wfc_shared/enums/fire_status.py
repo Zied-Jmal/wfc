@@ -38,12 +38,12 @@ EXTINGUISHED: Final[str] = "EXTINGUISHED"
 # Transition table
 # FireStateStore.transition() rejects any move NOT listed here.
 FIRE_TRANSITIONS: Final[dict[str, frozenset[str]]] = {
-    IGNITED:      frozenset({ACTIVE, SUPPRESSED}),
-    ACTIVE:       frozenset({SPREADING, CONTAINED, SUPPRESSED}),
-    SPREADING:    frozenset({ACTIVE, CONTAINED, SUPPRESSED}),
-    CONTAINED:    frozenset({SUPPRESSED, ACTIVE, SPREADING}),
-    SUPPRESSED:   frozenset({EXTINGUISHED, ACTIVE}),
-    EXTINGUISHED: frozenset(),   # terminal
+    IGNITED: frozenset({ACTIVE, SUPPRESSED}),
+    ACTIVE: frozenset({SPREADING, CONTAINED, SUPPRESSED}),
+    SPREADING: frozenset({ACTIVE, CONTAINED, SUPPRESSED}),
+    CONTAINED: frozenset({SUPPRESSED, ACTIVE, SPREADING}),
+    SUPPRESSED: frozenset({EXTINGUISHED, ACTIVE}),
+    EXTINGUISHED: frozenset(),  # terminal
 }
 
 TERMINAL_FIRE_STATES: Final[frozenset[str]] = frozenset({EXTINGUISHED})

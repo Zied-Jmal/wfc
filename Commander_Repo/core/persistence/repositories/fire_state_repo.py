@@ -14,21 +14,19 @@ Design:
 """
 
 from __future__ import annotations
-from typing import Any
 
 # Standard Library
-
 import json
+from typing import Any
 
 # Project Imports
-
 from core.persistence.database import Database
 from core.state.fire_state_store import FireRecord
 
 # region  CLASS - FireStateRepository
 
-class FireStateRepository:
 
+class FireStateRepository:
     """SQLite persistence layer for FireRecord objects.
 
     Uses a snapshot model: one row per fire_id, overwritten on
@@ -38,7 +36,7 @@ class FireStateRepository:
 
     # region  INITIALISATION
 
-    def __init__(self, db: Database)  -> None:
+    def __init__(self, db: Database) -> None:
         self._db = db
 
     # endregion
@@ -74,10 +72,17 @@ class FireStateRepository:
                 location_y    = excluded.location_y
             """,
             (
-                rec.fire_id, rec.state, rec.zone, rec.severity, rec.sensor_id,
-                coords[0], coords[1],
-                rec.assigned_node, rec.mission_id,
-                rec.created_at, rec.updated_at,
+                rec.fire_id,
+                rec.state,
+                rec.zone,
+                rec.severity,
+                rec.sensor_id,
+                coords[0],
+                coords[1],
+                rec.assigned_node,
+                rec.mission_id,
+                rec.created_at,
+                rec.updated_at,
                 json.dumps(rec.history),
             ),
         )
@@ -123,5 +128,6 @@ class FireStateRepository:
         )
 
     # endregion
+
 
 # endregion (end of class FireStateRepository)

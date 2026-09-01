@@ -6,16 +6,16 @@ PendingRepository - persistence for PendingCommand rows
 """
 
 from __future__ import annotations
-from typing import Any
 
 import json
+from typing import Any
 
 from core.persistence.database import Database
-from wfc_shared.schemas.pending import PendingCommand
 from wfc_shared.schemas.commands import Command
+from wfc_shared.schemas.pending import PendingCommand
+
 
 class PendingRepository:
-
     """Persistence layer for PendingCommand rows (approval pipeline).
 
     Ensures operators don't lose pending approval items across

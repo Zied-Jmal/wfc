@@ -9,29 +9,26 @@ MQTTClient - publish / subscribe wrapper over paho-mqtt
 from __future__ import annotations
 
 # Standard Library
-
 import json
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 
 # Third-Party Libraries
-
 import paho.mqtt.client as mqtt
-from paho.mqtt.enums import CallbackAPIVersion as MQTTCallbackAPIVersion
 from paho.mqtt.client import ConnectFlags, DisconnectFlags
+from paho.mqtt.enums import CallbackAPIVersion as MQTTCallbackAPIVersion
 from paho.mqtt.properties import Properties
 from paho.mqtt.reasoncodes import ReasonCode
 
 # Project Imports
-
 from core.utils.config import get_mqtt_host, get_mqtt_port
 
 Handler = Callable[[str, Any], None]
 
 # region  CLASS - MQTTClient
 
-class MQTTClient:
 
+class MQTTClient:
     """
     MQTT wrapper handling connection, pub/sub,
     message dispatching, and LWT registration.
@@ -42,21 +39,21 @@ class MQTTClient:
     def __init__(self, client_id: str) -> None:
         self._client_id = client_id
         self._connected = False
-        self.client     = mqtt.Client(
+        self.client = mqtt.Client(
             client_id=client_id,
             callback_api_version=MQTTCallbackAPIVersion.VERSION2,
         )
         self.host = get_mqtt_host()
         self.port = get_mqtt_port()
-        self._handler:               Handler | None = None
-# dict of topic -> qos so resubscribe-on-reconnect
-# preserves the QoS level each topic was originally subscribed at.
-        self._subscribed_topics: dict[str, int] = {}   # topic -> QoS
+        self._handler: Handler | None = None
+        # dict of topic -> qos so resubscribe-on-reconnect
+        # preserves the QoS level each topic was originally subscribed at.
+        self._subscribed_topics: dict[str, int] = {}  # topic -> QoS
 
-# Enable automatic reconnect (1s min, 60s max backoff)
+        # Enable automatic reconnect (1s min, 60s max backoff)
         self.client.reconnect_delay_set(min_delay=1, max_delay=60)
-        self.client.on_message    = self._on_message
-        self.client.on_connect    = self._on_connect
+        self.client.on_message = self._on_message
+        self.client.on_connect = self._on_connect
         self.client.on_disconnect = self._on_disconnect
 
     # endregion
@@ -81,6 +78,7 @@ class MQTTClient:
             max_retries: Maximum retries (-1 = infinite until success).
         """
         import time
+
         attempt = 0
         while True:
             try:
@@ -89,9 +87,7 @@ class MQTTClient:
                 return  # Success
             except Exception as e:
                 if max_retries != -1 and attempt >= max_retries:
-                    raise RuntimeError(
-                        f"Failed to connect to MQTT broker after {attempt} attempts"
-                    ) from e
+                    raise RuntimeError(f"Failed to connect to MQTT broker after {attempt} attempts") from e
                 attempt += 1
                 print(f"⚠️  MQTT connection failed (attempt {attempt}): {e}")
                 print(f"   Retrying in {retry_interval}s...")
@@ -126,7 +122,8 @@ class MQTTClient:
 
         if self._connected:
             self.client.subscribe(topic, qos=self._subscribed_topics[topic])
-# If not connected, it will be subscribed in _on_connect
+
+    # If not connected, it will be subscribed in _on_connect
 
     def publish(self, topic: str, payload: dict[Any, Any] | str, qos: int = 0) -> None:
         """Publish a message. Dicts are JSON-serialised automatically.
@@ -152,25 +149,27 @@ class MQTTClient:
             self._handler = fn
         else:
             _prev = self._handler
+
             def _chained(t: str, p: Any) -> None:
                 _prev(t, p)
                 fn(t, p)
+
             self._handler = _chained
 
     # endregion
 
     # region  PRIVATE - MQTT CALLBACKS
 
-# CHANGE 4: Update _on_connect to resubscribe ALL topics
+    # CHANGE 4: Update _on_connect to resubscribe ALL topics
     def _on_connect(
         self,
-        client:     mqtt.Client,
-        userdata:   Any,
-        flags:      ConnectFlags,
-        rc:         ReasonCode,
+        client: mqtt.Client,
+        userdata: Any,
+        flags: ConnectFlags,
+        rc: ReasonCode,
         properties: Properties | None = None,
     ) -> None:
-        self._connected = (rc == 0)
+        self._connected = rc == 0
         if self._connected:
             # Resubscribe to ALL topics on every reconnect, each at its
             # originally-requested QoS (uses dict topic->qos, was a
@@ -181,19 +180,19 @@ class MQTTClient:
 
     def _on_disconnect(
         self,
-        client:           mqtt.Client,
-        userdata:         Any,
+        client: mqtt.Client,
+        userdata: Any,
         disconnect_flags: DisconnectFlags,
-        reason_code:      ReasonCode,
-        properties:       Properties | None = None,
+        reason_code: ReasonCode,
+        properties: Properties | None = None,
     ) -> None:
         self._connected = False
 
     def _on_message(
         self,
-        client:   mqtt.Client,
+        client: mqtt.Client,
         userdata: Any,
-        msg:      mqtt.MQTTMessage,
+        msg: mqtt.MQTTMessage,
     ) -> None:
         try:
             payload = json.loads(msg.payload.decode())
@@ -203,5 +202,6 @@ class MQTTClient:
             self._handler(msg.topic, payload)
 
     # endregion
+
 
 # endregion (end of class MQTTClient)

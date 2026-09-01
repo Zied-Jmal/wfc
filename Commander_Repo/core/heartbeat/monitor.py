@@ -8,23 +8,22 @@ HeartbeatMonitor - node failure detection system
 
 from __future__ import annotations
 
-# Standard Library
-
-import time
 import threading
-from typing import Any, Callable
+
+# Standard Library
+import time
+from collections.abc import Callable
+from typing import Any
 
 # Third-Party Libraries
-
 # Project Imports
-
 from core.node_registry.registry import NodeRegistry
 from core.utils.logger import log
 
 # region  CLASS - HeartbeatMonitor
 
-class HeartbeatMonitor:
 
+class HeartbeatMonitor:
     """
     Monitors node liveness via heartbeat timestamps.
 
@@ -37,17 +36,17 @@ class HeartbeatMonitor:
 
     def __init__(
         self,
-        timeout:           float                         = 10.0,
-        registry:          NodeRegistry | None           = None,
-        on_node_failed:    Callable[[dict[str, Any]], None] | None = None,
+        timeout: float = 10.0,
+        registry: NodeRegistry | None = None,
+        on_node_failed: Callable[[dict[str, Any]], None] | None = None,
         on_node_recovered: Callable[[dict[str, Any]], None] | None = None,
     ):
-        self.timeout            = timeout
-        self.registry           = registry
-        self._on_node_failed    = on_node_failed    or (lambda p: None)  # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType]
+        self.timeout = timeout
+        self.registry = registry
+        self._on_node_failed = on_node_failed or (lambda p: None)  # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType]
         self._on_node_recovered = on_node_recovered or (lambda p: None)  # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType]
-        self._last_seen:  dict[str, float] = {}
-        self._dead_nodes: set[str]         = set()   # guards against duplicate NODE_FAILED
+        self._last_seen: dict[str, float] = {}
+        self._dead_nodes: set[str] = set()  # guards against duplicate NODE_FAILED
         self._running = False
 
     # endregion
@@ -56,7 +55,7 @@ class HeartbeatMonitor:
 
     def update(self, node_id: str) -> None:
         """Record a live heartbeat for node_id."""
-        now      = time.time()
+        now = time.time()
         was_dead = node_id in self._dead_nodes
 
         self._last_seen[node_id] = now
@@ -68,11 +67,13 @@ class HeartbeatMonitor:
         if was_dead:
             self._dead_nodes.discard(node_id)
             log("HeartbeatMonitor", f"recovered: {node_id}", channel="HEARTBEAT")
-            self._on_node_recovered({  # pyright: ignore[reportUnknownMemberType]
-                "node_id":   node_id,
-                "timestamp": now,
-                "source":    "heartbeat_monitor",
-            })
+            self._on_node_recovered(  # pyright: ignore[reportUnknownMemberType]
+                {
+                    "node_id": node_id,
+                    "timestamp": now,
+                    "source": "heartbeat_monitor",
+                }
+            )
 
         log("HeartbeatMonitor", f"heartbeat from {node_id}", channel="HEARTBEAT", level="TRACE")
 
@@ -92,10 +93,11 @@ class HeartbeatMonitor:
                     self._last_seen[node_id] = now
                     seeded += 1
         if seeded:
-            log("HeartbeatMonitor",
-                f"seeded {seeded} hydrated ACTIVE node(s) with a fresh "
-                f"{self.timeout}s grace window",
-                channel="HEARTBEAT")
+            log(
+                "HeartbeatMonitor",
+                f"seeded {seeded} hydrated ACTIVE node(s) with a fresh {self.timeout}s grace window",
+                channel="HEARTBEAT",
+            )
 
         self._running = True
         threading.Thread(target=self._loop, daemon=True).start()
@@ -138,13 +140,16 @@ class HeartbeatMonitor:
         if self.registry:
             self.registry.mark_dead(node_id)
 
-        self._on_node_failed({  # pyright: ignore[reportUnknownMemberType]
-            "node_id":   node_id,
-            "reason":    "HEARTBEAT_TIMEOUT",
-            "source":    "heartbeat_monitor",
-            "timestamp": now,
-        })
+        self._on_node_failed(  # pyright: ignore[reportUnknownMemberType]
+            {
+                "node_id": node_id,
+                "reason": "HEARTBEAT_TIMEOUT",
+                "source": "heartbeat_monitor",
+                "timestamp": now,
+            }
+        )
 
     # endregion
+
 
 # endregion (end of class HeartbeatMonitor)

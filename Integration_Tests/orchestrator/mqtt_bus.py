@@ -10,7 +10,8 @@ import json
 import os
 import threading
 import time
-from typing import Any, Callable, Final
+from collections.abc import Callable
+from typing import Any, Final
 
 import paho.mqtt.client as mqtt
 from paho.mqtt.enums import CallbackAPIVersion
@@ -28,8 +29,8 @@ class MQTTBus:
             client_id="wfc-test-orchestrator",
             callback_api_version=CallbackAPIVersion.VERSION2,
         )
-        self._client.on_connect    = self._on_connect
-        self._client.on_message    = self._on_message
+        self._client.on_connect = self._on_connect
+        self._client.on_message = self._on_message
         self._client.on_disconnect = self._on_disconnect  # pyright: ignore[reportAttributeAccessIssue]
         self._connected = False
         self._listeners: list[Listener] = []
@@ -57,8 +58,10 @@ class MQTTBus:
     def connected(self) -> bool:
         return self._connected
 
-    def _on_connect(self, client: mqtt.Client, userdata: Any, flags: dict[str, Any], rc: int, props: Any | None = None) -> None:
-        self._connected = (rc == 0)
+    def _on_connect(
+        self, client: mqtt.Client, userdata: Any, flags: dict[str, Any], rc: int, props: Any | None = None
+    ) -> None:
+        self._connected = rc == 0
         client.subscribe("wfc/#", qos=1)
 
     def _on_disconnect(self, client: mqtt.Client, userdata: Any, flags: int, rc: int, props: Any | None = None) -> None:
@@ -71,8 +74,11 @@ class MQTTBus:
             payload = msg.payload.decode(errors="replace")
 
         record: dict[str, Any] = {
-            "topic": msg.topic, "payload": payload,
-            "qos": msg.qos, "retain": bool(msg.retain), "ts": time.time(),
+            "topic": msg.topic,
+            "payload": payload,
+            "qos": msg.qos,
+            "retain": bool(msg.retain),
+            "ts": time.time(),
         }
         with self._lock:
             self._all_messages.append(record)

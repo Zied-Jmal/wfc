@@ -22,42 +22,46 @@ from __future__ import annotations
 import asyncio
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Callable
+from enum import StrEnum
+from typing import Any
 
 
-class StageStatus(str, Enum):
-    PENDING  = "PENDING"
-    RUNNING  = "RUNNING"
-    PASSED   = "PASSED"
-    FAILED   = "FAILED"
-    SKIPPED  = "SKIPPED"
-    TIMEOUT  = "TIMEOUT"
+class StageStatus(StrEnum):
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    PASSED = "PASSED"
+    FAILED = "FAILED"
+    SKIPPED = "SKIPPED"
+    TIMEOUT = "TIMEOUT"
 
 
-class RunStatus(str, Enum):
-    PENDING  = "PENDING"
-    RUNNING  = "RUNNING"
-    PASSED   = "PASSED"
-    FAILED   = "FAILED"
-    ABORTED  = "ABORTED"
+class RunStatus(StrEnum):
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    PASSED = "PASSED"
+    FAILED = "FAILED"
+    ABORTED = "ABORTED"
 
 
 @dataclass
 class MQTTObservation:
     """One MQTT message captured during a stage's observation window."""
 
-    topic:     str
-    payload:   Any
-    qos:       int
-    retain:    bool
-    ts:        float = field(default_factory=time.time)
+    topic: str
+    payload: Any
+    qos: int
+    retain: bool
+    ts: float = field(default_factory=time.time)
 
     def as_dict(self) -> dict[str, Any]:
         return {
-            "topic": self.topic, "payload": self.payload,
-            "qos": self.qos, "retain": self.retain, "ts": self.ts,
+            "topic": self.topic,
+            "payload": self.payload,
+            "qos": self.qos,
+            "retain": self.retain,
+            "ts": self.ts,
         }
 
 
@@ -65,28 +69,34 @@ class MQTTObservation:
 class StageResult:
     """Result of running a single stage."""
 
-    stage_id:        str
-    name:            str
-    status:          StageStatus = StageStatus.PENDING
-    started_at:      float | None = None
-    finished_at:     float | None = None
-    observations:    list[MQTTObservation] = field(default_factory=list)  # pyright: ignore[reportUnknownVariableType]
-    matched:         MQTTObservation | None = None
-    error:           str | None = None
-    component:       str = ""
-    expect_desc:     str = ""
-    timeout_s:       float = 10.0
+    stage_id: str
+    name: str
+    status: StageStatus = StageStatus.PENDING
+    started_at: float | None = None
+    finished_at: float | None = None
+    observations: list[MQTTObservation] = field(default_factory=list)  # pyright: ignore[reportUnknownVariableType]
+    matched: MQTTObservation | None = None
+    error: str | None = None
+    component: str = ""
+    expect_desc: str = ""
+    timeout_s: float = 10.0
 
     def as_dict(self) -> dict[str, Any]:
         return {
-            "stage_id": self.stage_id, "name": self.name, "status": self.status.value,
-            "started_at": self.started_at, "finished_at": self.finished_at,
-            "duration_s": (round(self.finished_at - self.started_at, 2)
-                           if self.started_at and self.finished_at else None),
+            "stage_id": self.stage_id,
+            "name": self.name,
+            "status": self.status.value,
+            "started_at": self.started_at,
+            "finished_at": self.finished_at,
+            "duration_s": (
+                round(self.finished_at - self.started_at, 2) if self.started_at and self.finished_at else None
+            ),
             "observations": [o.as_dict() for o in self.observations],
             "matched": self.matched.as_dict() if self.matched else None,
-            "error": self.error, "component": self.component,
-            "expect_desc": self.expect_desc, "timeout_s": self.timeout_s,
+            "error": self.error,
+            "component": self.component,
+            "expect_desc": self.expect_desc,
+            "timeout_s": self.timeout_s,
         }
 
 
@@ -114,15 +124,15 @@ class Stage:
         active_check_interval_s: Seconds between active check polls.
     """
 
-    stage_id:    str
-    name:        str
-    component:   str
+    stage_id: str
+    name: str
+    component: str
     expect_desc: str
     subscribe_topics: list[str]
-    match_fn:    Callable[[str, dict[str, Any], dict[str, Any]], bool]
-    timeout_s:   float = 10.0
-    on_enter:    Callable[[dict[str, Any]], Any] | None = None
-    on_skip:     Callable[[dict[str, Any]], Any] | None = None
+    match_fn: Callable[[str, dict[str, Any], dict[str, Any]], bool]
+    timeout_s: float = 10.0
+    on_enter: Callable[[dict[str, Any]], Any] | None = None
+    on_skip: Callable[[dict[str, Any]], Any] | None = None
     extract_ctx: Callable[[str, dict[str, Any], dict[str, Any]], dict[str, Any]] | None = None
     active_check: Callable[[dict[str, Any]], Any] | None = None
     active_check_interval_s: float = 1.0
@@ -133,28 +143,30 @@ class Scenario:
     """Collection of stages defining one end-to-end flow."""
 
     scenario_id: str
-    title:       str
+    title: str
     description: str
-    stages:      list[Stage]
+    stages: list[Stage]
 
 
 @dataclass
 class RunReport:
     """Result of executing a scenario."""
 
-    run_id:      str
+    run_id: str
     scenario_id: str
-    status:      RunStatus = RunStatus.PENDING
-    started_at:  float | None = None
+    status: RunStatus = RunStatus.PENDING
+    started_at: float | None = None
     finished_at: float | None = None
     stage_results: list[StageResult] = field(default_factory=list)  # pyright: ignore[reportUnknownVariableType]
-    context:     dict[str, Any] = field(default_factory=dict)  # pyright: ignore[reportUnknownVariableType]
+    context: dict[str, Any] = field(default_factory=dict)  # pyright: ignore[reportUnknownVariableType]
 
     def as_dict(self) -> dict[str, Any]:
         return {
-            "run_id": self.run_id, "scenario_id": self.scenario_id,
+            "run_id": self.run_id,
+            "scenario_id": self.scenario_id,
             "status": self.status.value,
-            "started_at": self.started_at, "finished_at": self.finished_at,
+            "started_at": self.started_at,
+            "finished_at": self.finished_at,
             "stage_results": [s.as_dict() for s in self.stage_results],
             "context": self.context,
         }
@@ -164,7 +176,6 @@ class ScenarioRunner:
     """Drives one Scenario through to completion (or abort), publishing
     live state via an asyncio callback so the UI can stream progress.
     """
-
 
     def __init__(
         self,
@@ -176,9 +187,9 @@ class ScenarioRunner:
         on_update: Callable[[RunReport], Any],
     ) -> None:
         self.scenario = scenario
-        self._sub      = mqtt_subscribe
-        self._unsub    = mqtt_unsubscribe
-        self._pub      = mqtt_publish
+        self._sub = mqtt_subscribe
+        self._unsub = mqtt_unsubscribe
+        self._pub = mqtt_publish
         self._register_listener = register_listener
         self._on_update = on_update
 
@@ -226,10 +237,7 @@ class ScenarioRunner:
                 break
 
         if not self._abort_requested:
-            any_failed = any(
-                r.status in (StageStatus.FAILED, StageStatus.TIMEOUT)
-                for r in self.report.stage_results
-            )
+            any_failed = any(r.status in (StageStatus.FAILED, StageStatus.TIMEOUT) for r in self.report.stage_results)
             self.report.status = RunStatus.FAILED if any_failed else RunStatus.PASSED
 
         self.report.finished_at = time.time()
@@ -239,9 +247,12 @@ class ScenarioRunner:
     async def _run_stage(self, stage_def: Stage) -> StageResult:
         """Execute a single stage and return its result."""
         result = StageResult(
-            stage_id=stage_def.stage_id, name=stage_def.name,
-            component=stage_def.component, expect_desc=stage_def.expect_desc,
-            timeout_s=stage_def.timeout_s, status=StageStatus.RUNNING,
+            stage_id=stage_def.stage_id,
+            name=stage_def.name,
+            component=stage_def.component,
+            expect_desc=stage_def.expect_desc,
+            timeout_s=stage_def.timeout_s,
+            status=StageStatus.RUNNING,
             started_at=time.time(),
         )
         self.report.stage_results.append(result)
@@ -283,15 +294,13 @@ class ScenarioRunner:
                     result.error = f"on_enter error: {exc}"
 
             timeout_task = asyncio.create_task(asyncio.sleep(stage_def.timeout_s))
-            match_task   = asyncio.create_task(loop_done.wait())
+            match_task = asyncio.create_task(loop_done.wait())
             control_task = asyncio.create_task(self._current_stage_event.wait())
             tasks: set[asyncio.Task[Any]] = {timeout_task, match_task, control_task}
 
             poll_task: asyncio.Task[None] | None = None
             if stage_def.active_check:
-                poll_task = asyncio.create_task(
-                    self._poll_active_check(stage_def, loop_done, matched_holder)
-                )
+                poll_task = asyncio.create_task(self._poll_active_check(stage_def, loop_done, matched_holder))
                 tasks.add(poll_task)
 
             _, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
@@ -300,10 +309,10 @@ class ScenarioRunner:
 
             if self._abort_requested:
                 result.status = StageStatus.SKIPPED
-                result.error  = "Run aborted by operator"
+                result.error = "Run aborted by operator"
             elif self._skip_requested == stage_def.stage_id:  # pyright: ignore[reportUnnecessaryComparison]
                 result.status = StageStatus.SKIPPED
-                result.error  = "Manually skipped by operator"
+                result.error = "Manually skipped by operator"
                 if stage_def.on_skip:
                     try:
                         extra_ctx = stage_def.on_skip(self.report.context)
@@ -315,7 +324,7 @@ class ScenarioRunner:
             elif "matched" in matched_holder:
                 obs = matched_holder["matched"]
                 result.matched = obs
-                result.status  = StageStatus.PASSED
+                result.status = StageStatus.PASSED
                 if stage_def.extract_ctx:
                     try:
                         extra_ctx = stage_def.extract_ctx(obs.topic, obs.payload, self.report.context)
@@ -325,7 +334,7 @@ class ScenarioRunner:
                         result.error = f"extract_ctx error: {exc}"
             else:
                 result.status = StageStatus.TIMEOUT
-                result.error  = f"No matching message within {stage_def.timeout_s}s"
+                result.error = f"No matching message within {stage_def.timeout_s}s"
                 if stage_def.on_skip:
                     try:
                         extra_ctx = stage_def.on_skip(self.report.context)
@@ -357,7 +366,10 @@ class ScenarioRunner:
                 self._pub(topic, payload, qos, retain)
 
     async def _poll_active_check(
-        self, stage_def: Stage, loop_done: asyncio.Event, matched_holder: dict[str, Any],
+        self,
+        stage_def: Stage,
+        loop_done: asyncio.Event,
+        matched_holder: dict[str, Any],
     ) -> None:
         """Repeatedly call stage_def.active_check(ctx) until it returns True
         or the stage's overall timeout fires."""
@@ -369,8 +381,10 @@ class ScenarioRunner:
                 if result:
                     if "matched" not in matched_holder:
                         matched_holder["matched"] = MQTTObservation(
-                            topic="(active-check)", payload={"ok": True},
-                            qos=0, retain=False,
+                            topic="(active-check)",
+                            payload={"ok": True},
+                            qos=0,
+                            retain=False,
                         )
                     loop_done.set()
                     return
@@ -380,10 +394,7 @@ class ScenarioRunner:
 
 
 def _topic_matches_any(topic: str, filters: list[str]) -> bool:
-    for f in filters:
-        if _mqtt_topic_match(topic, f):
-            return True
-    return False
+    return any(_mqtt_topic_match(topic, f) for f in filters)
 
 
 def _mqtt_topic_match(topic: str, filt: str) -> bool:

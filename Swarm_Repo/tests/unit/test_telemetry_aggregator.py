@@ -1,19 +1,26 @@
 # TEST: U-TELE-001 to U-TELE-004
 
 import time
+
 from wfc_shared.schemas.telemetry import DroneTelemetry
+
 
 class TestTelemetryAggregator:
     def test_calc_fire_intensity_thresholds(self):
         from core.aggregator.telemetry_aggregator import TelemetryAggregator
+
         agg = TelemetryAggregator("sl-1")
 
         def make_scout(temp_c: float) -> DroneTelemetry:
             return DroneTelemetry(
-                drone_id="sd-1", leader_id="sl-1", timestamp=time.time(),
+                drone_id="sd-1",
+                leader_id="sl-1",
+                timestamp=time.time(),
                 position=(36.8, 10.18),
-                battery_wh=200.0, battery_pct=0.85,
-                task="SCOUTING", connectivity="STRONG",
+                battery_wh=200.0,
+                battery_pct=0.85,
+                task="SCOUTING",
+                connectivity="STRONG",
                 thermal_peak_temp_c=temp_c,
             )
 
@@ -27,6 +34,7 @@ class TestTelemetryAggregator:
 
     def test_empty_snapshot_returns_idle(self):
         from core.aggregator.telemetry_aggregator import TelemetryAggregator
+
         agg = TelemetryAggregator("sl-1")
         snap = agg.snapshot()
         assert snap.status == "IDLE"
@@ -34,6 +42,7 @@ class TestTelemetryAggregator:
 
     def test_calc_suppression_returns_none_for_tiny_perimeter(self):
         from core.aggregator.telemetry_aggregator import TelemetryAggregator
+
         agg = TelemetryAggregator("sl-1")
         result = agg._calc_suppression(100.0, 0.5, "HIGH")  # pyright: ignore[reportPrivateUsage]
         assert result is None
@@ -44,15 +53,20 @@ class TestTelemetryAggregator:
 
     def test_ingest_window_eviction(self):
         from core.aggregator.telemetry_aggregator import TelemetryAggregator
+
         agg = TelemetryAggregator("sl-1")
 
         def make_telem(timestamp: float) -> DroneTelemetry:
             return DroneTelemetry(
-                drone_id="sd-1", leader_id="sl-1", timestamp=timestamp,
+                drone_id="sd-1",
+                leader_id="sl-1",
+                timestamp=timestamp,
                 position=(36.8, 10.18),
-                battery_wh=200.0, battery_pct=0.85,
+                battery_wh=200.0,
+                battery_pct=0.85,
                 thermal_peak_temp_c=300.0,
-                task="SCOUTING", connectivity="STRONG",
+                task="SCOUTING",
+                connectivity="STRONG",
             )
 
         t0 = time.time() - 10
